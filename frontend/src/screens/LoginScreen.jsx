@@ -27,7 +27,7 @@ const LoginScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Welcome Back</Text>
-            
+
             <CustomInput
                 placeholder="Email Address"
                 value={email}
@@ -41,7 +41,7 @@ const LoginScreen = ({ navigation }) => {
             />
 
             <CustomButton title="Login" onPress={handleLogin} />
-            
+
             <Text style={styles.link} onPress={() => navigation.navigate('Register')}>
                 Don't have an account? Register here
             </Text>

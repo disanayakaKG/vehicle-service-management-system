@@ -27,7 +27,7 @@ const createProduct = async (req, res) => {
             stockQuantity,
             rating: rating || 0,
             description,
-            image: req.file ? `/uploads/${req.file.filename}` : '',
+            image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || ''),
             createdBy: req.user._id // Attached by protect middleware
         });
 
@@ -149,6 +149,8 @@ const updateProduct = async (req, res) => {
             // Handle image update
             if (req.file) {
                 product.image = `/uploads/${req.file.filename}`;
+            } else if (req.body.image !== undefined) {
+                product.image = req.body.image;
             }
 
             const updatedProduct = await product.save();

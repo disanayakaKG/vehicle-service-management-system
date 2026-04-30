@@ -1,16 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { API_BASE_URL } from '../api/api';
 
-const IMAGE_BASE_URL = "http://10.218.46.146:5000";
+const resolveImageUri = (image) => {
+  if (!image) return null;
+  if (typeof image !== 'string') return null;
+  if (image.startsWith('http')) return image;
+  if (image.startsWith('/uploads')) return `${API_BASE_URL}${image}`;
+  if (image.startsWith('uploads')) return `${API_BASE_URL}/${image}`;
+  if (image.startsWith('file')) return image;
+  return `${API_BASE_URL}/uploads/${image}`;
+};
 
 const ProductCard = ({ product, onPress }) => {
-    console.log("Image URL:", IMAGE_BASE_URL + product.image);
+    const imageUri = resolveImageUri(product?.image);
+    console.log("ProductCard product.image:", product?.image);
+    console.log("ProductCard resolved imageUri:", imageUri);
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress}>
-            {product.image ? (
-                <Image source={{ uri: IMAGE_BASE_URL + product.image }} style={styles.image} />
-            ) : (
+            <Image
+                source={imageUri ? { uri: imageUri } : null}
+                style={styles.image}
+                resizeMode="cover"
+                onError={(e) => console.log("ProductCard image load error:", e.nativeEvent.error, imageUri)}
+            />
+            {!imageUri && (
                 <View style={[styles.image, styles.placeholder]}>
                     <Text>No Image</Text>
                 </View>

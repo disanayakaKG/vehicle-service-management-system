@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Central BASE_URL for the backend API
-const BASE_URL = "http://10.218.46.146:5000/api";
+const BASE_URL = "http://10.190.165.146:5000/api";
+const API_BASE_URL = "http://10.190.165.146:5000";
 
 const API = axios.create({
     baseURL: BASE_URL,
@@ -25,6 +26,10 @@ export const getUserProfile = async (token) => {
 // Product API Functions
 export const getProducts = async (params) => {
     return await API.get('/products', { params });
+};
+
+export const getDashboardOverview = async () => {
+    return await API.get('/dashboard/overview');
 };
 
 export const getTopRatedProducts = async () => {
@@ -59,4 +64,5 @@ export const deleteProduct = async (id, token) => {
     });
 };
 
+export { API_BASE_URL };
 export default API;
