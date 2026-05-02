@@ -49,7 +49,10 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            const response = await loginUser({ email, password });
+            const response = await loginUser({
+                email: email.trim().toLowerCase(),
+                password
+            });
             const { token, ...userData } = response.data;
 
             setToken(token);
@@ -60,9 +63,12 @@ export const AuthProvider = ({ children }) => {
 
             return { success: true };
         } catch (error) {
+            const isNetworkError = !error.response;
             return {
                 success: false,
-                message: error.response?.data?.message || 'Login failed'
+                message: isNetworkError
+                    ? 'Cannot reach server. Please check backend is running and API URL is correct.'
+                    : (error.response?.data?.message || 'Login failed')
             };
         }
     };

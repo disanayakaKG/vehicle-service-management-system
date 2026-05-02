@@ -7,6 +7,29 @@ import {
     deleteProduct as deleteProductApi 
 } from '../api/api';
 
+const appendImageToFormData = (formData, image) => {
+    if (!image) return;
+
+    if (typeof image === 'string') {
+        formData.append('image', image);
+        return;
+    }
+
+    if (image.uri) {
+        const uri = image.uri;
+        const filename = image.fileName || uri.split('/').pop() || `product-${Date.now()}.jpg`;
+        const extMatch = /\.(\w+)$/.exec(filename);
+        const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg';
+        const type = image.mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+        formData.append('image', {
+            uri,
+            name: filename,
+            type,
+        });
+    }
+};
+
 export const ProductContext = createContext();
 
 export const ProductProvider = ({ children }) => {
@@ -57,32 +80,10 @@ export const ProductProvider = ({ children }) => {
             formData.append('price', productData.price.toString());
             formData.append('discount', productData.discount.toString());
             formData.append('stockQuantity', productData.stocks.toString()); // stocks -> stockQuantity
+            formData.append('warrantyMonths', productData.warrantyMonths.toString());
             formData.append('description', productData.description);
-            
-            // Add image if provided - use URL string or local file upload when necessary
-            if (productData.image) {
-                let imageUri = null;
-                if (typeof productData.image === 'string') {
-                    imageUri = productData.image;
-                } else if (productData.image.uri) {
-                    imageUri = productData.image.uri;
-                }
 
-                if (imageUri) {
-                    if (imageUri.startsWith('file')) {
-                        const filename = imageUri.split('/').pop();
-                        const match = /\.(\w+)$/.exec(filename);
-                        const type = match ? `image/${match[1]}` : `image/jpeg`;
-                        formData.append('image', {
-                            uri: imageUri,
-                            name: filename,
-                            type,
-                        });
-                    } else {
-                        formData.append('image', imageUri);
-                    }
-                }
-            }
+            appendImageToFormData(formData, productData.image);
 
             const response = await createProductApi(formData, token);
             const newProduct = response.data;
@@ -123,32 +124,10 @@ export const ProductProvider = ({ children }) => {
             formData.append('price', updatedProductData.price.toString());
             formData.append('discount', updatedProductData.discount.toString());
             formData.append('stockQuantity', updatedProductData.stocks.toString()); // stocks -> stockQuantity
+            formData.append('warrantyMonths', updatedProductData.warrantyMonths.toString());
             formData.append('description', updatedProductData.description);
-            
-            // Add image if provided - use URL string or local file upload when necessary
-            if (updatedProductData.image) {
-                let imageUri = null;
-                if (typeof updatedProductData.image === 'string') {
-                    imageUri = updatedProductData.image;
-                } else if (updatedProductData.image.uri) {
-                    imageUri = updatedProductData.image.uri;
-                }
-                
-                if (imageUri) {
-                    if (imageUri.startsWith('file')) {
-                        const filename = imageUri.split('/').pop();
-                        const match = /\.(\w+)$/.exec(filename);
-                        const type = match ? `image/${match[1]}` : `image/jpeg`;
-                        formData.append('image', {
-                            uri: imageUri,
-                            name: filename,
-                            type,
-                        });
-                    } else {
-                        formData.append('image', imageUri);
-                    }
-                }
-            }
+
+            appendImageToFormData(formData, updatedProductData.image);
 
             const response = await updateProductAPI(realId, formData, token);
             const updatedProduct = response.data;

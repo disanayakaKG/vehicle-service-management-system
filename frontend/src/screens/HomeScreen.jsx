@@ -13,17 +13,18 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { ProductContext } from '../context/ProductContext';
 import { getDashboardOverview } from '../api/api';
+import CustomerDashboardScreen from './CustomerDashboardScreen';
 
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 const HomeScreen = ({ navigation }) => {
-    const { logout, user } = useContext(AuthContext);
+    const { logout, user, token } = useContext(AuthContext);
     const { products } = useContext(ProductContext);
 
     const [menuVisible, setMenuVisible] = useState(false);
     const [stats, setStats] = useState({
         totalProducts: 0,
-        ordersToday: 0,
+        totalOrders: 0,
         revenue: 0,
         lowStock: 0
     });
@@ -36,7 +37,7 @@ const HomeScreen = ({ navigation }) => {
             setError(null);
             // Only fetch dashboard overview for admins
             if (user?.role === 'admin') {
-                const response = await getDashboardOverview();
+                const response = await getDashboardOverview(token);
                 if (response.data.success) {
                     setStats(response.data.data);
                 }
@@ -48,7 +49,7 @@ const HomeScreen = ({ navigation }) => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [user?.role]);
+    }, [user?.role, token]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -60,13 +61,9 @@ const HomeScreen = ({ navigation }) => {
     }, [fetchDashboardData]);
 
     const menuItems = [
-        { title: 'Order and Delivery', icon: 'truck', screen: 'Placeholder', param: 'Order and Delivery' },
-        { title: 'Feedback and Warranty', icon: 'shield-checkmark', screen: 'Placeholder', param: 'Feedback and Warranty' },
-        { title: 'Supplier Management', icon: 'business', screen: 'Placeholder', param: 'Supplier Management' },
         { title: 'Spare Parts / Product', icon: 'cube', screen: user?.role === 'admin' ? 'ProductManagement' : 'ProductList', param: null },
-
-        { title: 'Service and Booking', icon: 'calendar', screen: 'Placeholder', param: 'Service and Booking' },
-        { title: 'Stocks and Inventory', icon: 'layers', screen: 'Placeholder', param: 'Stocks and Inventory' },
+        { title: 'Service and Booking', icon: 'calendar', screen: user?.role === 'admin' ? 'ServiceManagement' : 'Services', param: null },
+        { title: 'Stocks and Inventory', icon: 'layers', screen: user?.role === 'admin' ? 'InventoryDashboard' : 'Placeholder', param: user?.role === 'admin' ? null : 'Stocks and Inventory' },
         { title: 'Logout', icon: 'log-out', screen: 'Logout', param: null },
     ];
 
@@ -81,8 +78,11 @@ const HomeScreen = ({ navigation }) => {
         }
     };
 
-    const StatCard = ({ title, value, icon, color }) => (
-        <View style={styles.statCard}>
+    const StatCard = ({ title, value, icon, color, detailType }) => (
+        <TouchableOpacity
+            style={[styles.statCard, { borderTopColor: color }]}
+            onPress={() => navigation.navigate('AdminDashboardDetails', { type: detailType, title })}
+        >
             <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
                 <MaterialIcons name={icon} size={24} color={color} />
             </View>
@@ -90,8 +90,12 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.statValue}>{value}</Text>
                 <Text style={styles.statTitle}>{title}</Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
+
+    if (user?.role === "customer") {
+        return <CustomerDashboardScreen navigation={navigation} />;
+    }
 
     return (
         <View style={styles.container}>
@@ -143,25 +147,29 @@ const HomeScreen = ({ navigation }) => {
                             value={products.length}
                             icon="inventory"
                             color="#007bff"
+                            detailType="products"
                         />
 
                         <StatCard
-                            title="Orders Today"
-                            value={stats.ordersToday}
+                            title="Total Orders"
+                            value={stats.totalOrders}
                             icon="shopping-cart"
                             color="#28a745"
+                            detailType="orders"
                         />
                         <StatCard
                             title="Revenue"
                             value={`Rs. ${stats.revenue.toLocaleString()}`}
                             icon="attach-money"
                             color="#ffc107"
+                            detailType="revenue"
                         />
                         <StatCard
                             title="Low Stock"
                             value={stats.lowStock}
                             icon="warning"
                             color="#dc3545"
+                            detailType="low-stock"
                         />
                     </View>
                 ) : (
@@ -236,232 +244,286 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f4f7fe',
+        backgroundColor: '#f8fafc',
     },
     topBar: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 50,
-        paddingBottom: 10,
-        backgroundColor: '#fff',
+        paddingHorizontal: 18,
+        paddingTop: 52,
+        paddingBottom: 16,
+        backgroundColor: '#ffffff',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
     },
     profileBtn: {
         justifyContent: 'center',
         alignItems: 'center',
+        opacity: 0.9,
     },
     menuBtn: {
-        width: 40,
-        height: 40,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 10,
+        width: 42,
+        height: 42,
+        backgroundColor: '#f0f4f9',
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#1b2559',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
     },
     scrollContent: {
-        padding: 20,
+        paddingHorizontal: 18,
+        paddingTop: 20,
+        paddingBottom: 30,
     },
     header: {
-        marginBottom: 20,
+        marginBottom: 28,
+        paddingBottom: 8,
     },
     welcome: {
-        fontSize: 26,
-        fontWeight: 'bold',
-        color: '#1b2559',
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#0f172a',
+        letterSpacing: -0.3,
     },
     role: {
-        fontSize: 16,
-        color: '#007bff',
-        marginTop: 4,
+        fontSize: 14,
+        color: '#0066cc',
+        marginTop: 6,
         fontWeight: '600',
+        letterSpacing: 0.3,
     },
     loaderContainer: {
-        height: 200,
+        height: 240,
         justifyContent: 'center',
         alignItems: 'center',
     },
     loaderText: {
-        marginTop: 10,
-        color: '#666',
+        marginTop: 12,
+        color: '#64748b',
+        fontSize: 14,
+        fontWeight: '500',
     },
     errorContainer: {
-        height: 200,
+        height: 240,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: 20,
-        padding: 20,
+        padding: 24,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: '#dc3545',
     },
     errorText: {
         color: '#dc3545',
-        marginTop: 10,
-        fontSize: 16,
+        marginTop: 12,
+        fontSize: 15,
         textAlign: 'center',
+        fontWeight: '500',
     },
     retryBtn: {
-        marginTop: 15,
-        backgroundColor: '#007bff',
-        paddingHorizontal: 20,
-        paddingVertical: 8,
+        marginTop: 18,
+        backgroundColor: '#0066cc',
+        paddingHorizontal: 24,
+        paddingVertical: 10,
         borderRadius: 10,
+        elevation: 2,
+        shadowColor: '#0066cc',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     retryText: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontWeight: '600',
+        fontSize: 14,
     },
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        marginBottom: 20,
+        gap: 12,
     },
     statCard: {
-        backgroundColor: '#fff',
+        backgroundColor: '#ffffff',
         width: '48%',
-        padding: 15,
-        borderRadius: 15,
+        padding: 16,
+        borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 15,
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        borderTopWidth: 3,
     },
     statIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 50,
+        height: 50,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     statValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1b2559',
+        fontSize: 19,
+        fontWeight: '700',
+        color: '#0f172a',
+        lineHeight: 24,
     },
     statTitle: {
         fontSize: 12,
-        color: '#a3aed0',
-        fontWeight: '600',
+        color: '#78809a',
+        fontWeight: '500',
+        marginTop: 2,
+        letterSpacing: 0.2,
     },
     heroContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: '#ffffff',
         borderRadius: 20,
-        padding: 20,
+        padding: 24,
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
-        elevation: 4,
+        marginTop: 8,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
         shadowRadius: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: '#0066cc',
     },
     heroCircle: {
-        width: 80,
-        height: 80,
-        backgroundColor: '#f4f7fe',
-        borderRadius: 40,
+        width: 88,
+        height: 88,
+        backgroundColor: '#eef4ff',
+        borderRadius: 44,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 20,
+        elevation: 1,
+        shadowColor: '#0066cc',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
     },
     heroInfo: {
         flex: 1,
     },
     heroTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1b2559',
-        marginBottom: 4,
+        fontWeight: '700',
+        color: '#0f172a',
+        marginBottom: 6,
+        letterSpacing: -0.2,
     },
     heroText: {
         fontSize: 13,
-        color: '#707eae',
-        lineHeight: 18,
+        color: '#64748b',
+        lineHeight: 20,
+        fontWeight: '400',
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
         justifyContent: 'flex-start',
         alignItems: 'flex-end',
         paddingTop: 100,
-        paddingRight: 20,
+        paddingRight: 16,
     },
     menuContainer: {
-        backgroundColor: '#fff',
-        width: 250,
-        borderRadius: 15,
-        padding: 15,
-        elevation: 10,
+        backgroundColor: '#ffffff',
+        width: 260,
+        borderRadius: 18,
+        padding: 16,
+        elevation: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
     },
     menuHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15,
+        marginBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        paddingBottom: 10,
+        borderBottomColor: '#e2e8f0',
+        paddingBottom: 12,
     },
     menuTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1b2559',
+        fontWeight: '700',
+        color: '#0f172a',
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
-        borderRadius: 8,
-        paddingHorizontal: 10,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        marginVertical: 2,
     },
     logoutMenuItem: {
-        marginTop: 10,
+        marginTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
-        paddingTop: 15,
+        borderTopColor: '#e2e8f0',
+        paddingTop: 12,
+        backgroundColor: '#fff5f5',
     },
     menuIcon: {
         width: 30,
     },
     menuItemText: {
         fontSize: 15,
-        color: '#444',
+        color: '#334155',
         fontWeight: '500',
+        letterSpacing: 0.1,
     },
     logoutMenuText: {
         color: '#dc3545',
-        fontWeight: 'bold',
+        fontWeight: '600',
     },
     customerWelcome: {
-        backgroundColor: '#fff',
+        backgroundColor: '#ffffff',
         borderRadius: 20,
         padding: 40,
         alignItems: 'center',
         marginVertical: 20,
-        elevation: 2,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
     },
     customerWelcomeTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1b2559',
-        marginTop: 15,
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#0f172a',
+        marginTop: 16,
         marginBottom: 8,
+        letterSpacing: -0.2,
     },
     customerWelcomeText: {
         fontSize: 14,
-        color: '#707eae',
+        color: '#64748b',
         textAlign: 'center',
-        lineHeight: 20,
+        lineHeight: 22,
+        fontWeight: '400',
     },
 });
 

@@ -15,14 +15,15 @@ const generateToken = (id, role) => {
 const registerUser = async (req, res) => {
     try {
         const { name, email, password, phone, role } = req.body;
+        const normalizedEmail = email?.trim().toLowerCase();
 
         // 1. Validate required fields
-        if (!name || !email || !password) {
+        if (!name || !normalizedEmail || !password) {
             return res.status(400).json({ message: 'Please provide name, email, and password' });
         }
 
         // 2. Check if user already exists
-        const userExists = await User.findOne({ email });
+        const userExists = await User.findOne({ email: normalizedEmail });
         if (userExists) {
             return res.status(400).json({ message: 'User already exists with this email' });
         }
@@ -34,7 +35,7 @@ const registerUser = async (req, res) => {
         // 4. Create and save the user
         const user = await User.create({
             name,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
             phone: phone || null,
             role: role || 'customer'
@@ -59,29 +60,31 @@ const registerUser = async (req, res) => {
 
 // @desc    Authenticate user & get token
 // @route   POST /api/auth/login
-// @access  Public
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+        const normalizedEmail = email?.trim().toLowerCase();
 
-        // 1. Validate email and password presence
-        if (!email || !password) {
+        console.log(`🔐 Login attempt for email: ${normalizedEmail}`);   // ← Helpful log
+
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ message: 'Please provide email and password' });
         }
 
-        // 2. Check if user exists
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
+            console.log(`❌ User not found: ${normalizedEmail}`);
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // 3. Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log(`❌ Password mismatch for: ${normalizedEmail}`);
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        // 4. Return user data and token
+        console.log(`✅ Login successful for: ${normalizedEmail}`);
+
         res.status(200).json({
             _id: user._id,
             name: user.name,
@@ -91,10 +94,10 @@ const loginUser = async (req, res) => {
             token: generateToken(user._id, user.role)
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error(`💥 Login Error:`, error.message);   // ← Very important
+        res.status(500).json({ message: error.message || 'Server error during login' });
     }
 };
-
 // @desc    Get user profile
 // @route   GET /api/auth/profile
 // @access  Private

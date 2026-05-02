@@ -7,7 +7,7 @@ const createProduct = async (req, res) => {
     try {
         const { 
             productId, name, brand, vehicleType, vehicleName, 
-            category, price, discount, stockQuantity, rating, description 
+            category, price, discount, stockQuantity, rating, description, warrantyMonths 
         } = req.body;
 
         // Calculate finalPrice
@@ -27,6 +27,7 @@ const createProduct = async (req, res) => {
             stockQuantity,
             rating: rating || 0,
             description,
+            warrantyMonths: warrantyMonths !== undefined ? warrantyMonths : 0,
             image: req.file ? `/uploads/${req.file.filename}` : (req.body.image || ''),
             createdBy: req.user._id // Attached by protect middleware
         });
@@ -135,6 +136,7 @@ const updateProduct = async (req, res) => {
             product.stockQuantity = req.body.stockQuantity || product.stockQuantity;
             product.rating = req.body.rating || product.rating;
             product.description = req.body.description || product.description;
+            product.warrantyMonths = req.body.warrantyMonths !== undefined ? req.body.warrantyMonths : product.warrantyMonths;
 
             // Handle price and discount changes for finalPrice recalculation
             if (req.body.price !== undefined || req.body.discount !== undefined) {

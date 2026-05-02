@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getOverview } = require('../controllers/dashboardController');
+const { getOverview, getDetails } = require('../controllers/dashboardController');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-// For now, making it public for testing, but ideally it should be protected
-router.get('/overview', getOverview);
+router.get('/overview', protect, adminOnly, getOverview);
+router.get('/details/:type', protect, adminOnly, getDetails);
 
 module.exports = router;

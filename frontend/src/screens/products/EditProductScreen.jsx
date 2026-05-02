@@ -1,11 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { 
-    View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity 
+    View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { AuthContext } from '../../context/AuthContext';
 import { ProductContext } from '../../context/ProductContext';
 import CustomInput from '../../components/CustomInput';
 import CustomButton from '../../components/CustomButton';
+import { API_BASE_URL } from '../../api/api';
 import { Ionicons } from '@expo/vector-icons';
 
 const VEHICLE_TYPE_OPTIONS = ['Car', 'Van', 'Truck', 'Bus', 'Motorcycle'];
@@ -75,6 +77,46 @@ const EditProductScreen = ({ route, navigation }) => {
         image: product.image || '',
     });
 
+    const getImageUri = () => {
+        if (form.image?.uri) return form.image.uri;
+        if (typeof form.image === 'string' && form.image) {
+            return form.image.startsWith('/uploads') ? `${API_BASE_URL}${form.image}` : form.image;
+        }
+        return null;
+    };
+
+    const handleSelectImage = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert('Permission required', 'Media library access is required to select images.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+        });
+
+        if (!result.canceled && !result.cancelled) {
+            const selectedAsset = result.assets?.[0] || result;
+            if (selectedAsset?.uri) {
+                setForm({
+                    ...form,
+                    image: {
+                        uri: selectedAsset.uri,
+                        fileName: selectedAsset.fileName,
+                        mimeType: selectedAsset.mimeType,
+                    },
+                });
+            }
+        }
+    };
+
+    const handleRemoveImage = () => {
+        setForm({ ...form, image: '' });
+    };
+
     const handleUpdate = async () => {
         const { 
             productId, name, brand, vehicleType, category,
@@ -124,8 +166,6 @@ const EditProductScreen = ({ route, navigation }) => {
             return;
         }
 
-        const imageUrl = form.image?.trim() || '';
-
         const result = await updateProduct(realId, {
             productId,
             name,
@@ -137,7 +177,7 @@ const EditProductScreen = ({ route, navigation }) => {
             stocks: numStocks,
             warrantyMonths: numWarranty,
             description,
-            image: imageUrl
+            image: form.image || ''
         });
 
         if (result?.success) {
@@ -163,12 +203,19 @@ const EditProductScreen = ({ route, navigation }) => {
 
             <View style={styles.formCard}>
                 <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Image URL</Text>
-                    <CustomInput
-                        placeholder="e.g. https://example.com/product-image.jpg"
-                        value={form.image}
-                        onChangeText={(val) => setForm({ ...form, image: val })}
+                    <Text style={styles.inputLabel}>Select Product Image</Text>
+                    <CustomButton
+                        title={getImageUri() ? 'Change Image' : 'Select Product Image'}
+                        onPress={handleSelectImage}
                     />
+                    {getImageUri() ? (
+                        <View style={styles.imagePreviewWrapper}>
+                            <Image source={{ uri: getImageUri() }} style={styles.imagePreview} />
+                            <TouchableOpacity style={styles.removeImageBtn} onPress={handleRemoveImage}>
+                                <Text style={styles.removeImageText}>Remove Image</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -285,7 +332,7 @@ const EditProductScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f4f7fe',
+        backgroundColor: '#F8FAFC',
     },
     scrollContent: {
         paddingBottom: 30,
@@ -295,9 +342,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 20,
-        backgroundColor: '#fff',
+        backgroundColor: '#F8FAFC',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#E8ECF5',
     },
     backBtn: {
         marginRight: 15,
@@ -305,18 +352,41 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#1b2559',
+        color: '#172554',
     },
     formCard: {
         backgroundColor: '#fff',
         margin: 20,
-        borderRadius: 15,
-        padding: 20,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
+        borderRadius: 22,
+        padding: 22,
+        borderWidth: 1,
+        borderColor: '#E8ECF5',
+        elevation: 3,
+        shadowColor: '#172554',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.06,
+        shadowRadius: 18,
+    },
+    imagePreviewWrapper: {
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    imagePreview: {
+        width: '100%',
+        height: 200,
+        borderRadius: 12,
+        marginTop: 12,
+    },
+    removeImageBtn: {
+        marginTop: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: '#fde2e1',
+    },
+    removeImageText: {
+        color: '#cc1f1a',
+        fontWeight: '600',
     },
     imagePicker: {
         height: 180,
@@ -349,11 +419,11 @@ const styles = StyleSheet.create({
     },
     selectInput: {
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 10,
+        borderColor: '#E8ECF5',
+        borderRadius: 16,
         paddingVertical: 14,
-        paddingHorizontal: 12,
-        backgroundColor: '#fff',
+        paddingHorizontal: 14,
+        backgroundColor: '#F8FAFC',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -368,8 +438,8 @@ const styles = StyleSheet.create({
     dropdownList: {
         marginTop: 8,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 10,
+        borderColor: '#E8ECF5',
+        borderRadius: 16,
         backgroundColor: '#fff',
         overflow: 'hidden',
     },
