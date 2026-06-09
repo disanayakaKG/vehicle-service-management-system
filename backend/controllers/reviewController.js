@@ -1,5 +1,6 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
+const Order = require('../models/Order');
 
 async function recalculateProductRating(productId) {
   const reviews = await Review.find({ product: productId });
@@ -9,6 +10,16 @@ async function recalculateProductRating(productId) {
     average = sum / reviews.length;
   }
   await Product.findByIdAndUpdate(productId, { rating: average });
+}
+
+async function hasUserPurchasedAndReceivedProduct(userId, productId) {
+  const orders = await Order.find({
+    customer: userId,
+    'items.productId': productId,
+    orderStatus: 'Delivered',
+    deliveryStatus: 'Delivered'
+  });
+  return orders.length > 0;
 }
 
 exports.getReviewsByProduct = async (req, res) => {
@@ -35,6 +46,11 @@ exports.createReview = async (req, res) => {
 
     if (!comment || comment.trim() === '') {
       return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    const hasPurchased = await hasUserPurchasedAndReceivedProduct(userId, productId);
+    if (!hasPurchased) {
+      return res.status(403).json({ message: 'You can only review products you have purchased and received' });
     }
 
     const existingReview = await Review.findOne({ user: userId, product: productId });
@@ -71,6 +87,11 @@ exports.updateReview = async (req, res) => {
       return res.status(403).json({ message: 'You can only update your own reviews' });
     }
 
+    const hasPurchased = await hasUserPurchasedAndReceivedProduct(req.user._id, review.product);
+    if (!hasPurchased) {
+      return res.status(403).json({ message: 'You can only edit reviews for products you have purchased and received' });
+    }
+
     if (rating < 1 || rating > 5) {
       return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
@@ -100,6 +121,11 @@ exports.deleteReview = async (req, res) => {
 
     if (review.user.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only delete your own reviews' });
+    }
+
+    const hasPurchased = await hasUserPurchasedAndReceivedProduct(req.user._id, review.product);
+    if (!hasPurchased) {
+      return res.status(403).json({ message: 'You can only delete reviews for products you have purchased and received' });
     }
 
     const productId = review.product;

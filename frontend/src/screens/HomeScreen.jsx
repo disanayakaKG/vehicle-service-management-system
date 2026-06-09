@@ -84,11 +84,11 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('AdminDashboardDetails', { type: detailType, title })}
         >
             <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-                <MaterialIcons name={icon} size={24} color={color} />
+                <Ionicons name={icon} size={24} color={color} />
             </View>
-            <View>
-                <Text style={styles.statValue}>{value}</Text>
-                <Text style={styles.statTitle}>{title}</Text>
+            <View style={styles.statContent}>
+                <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+                <Text style={styles.statTitle} numberOfLines={1}>{title}</Text>
             </View>
         </TouchableOpacity>
     );
@@ -145,30 +145,30 @@ const HomeScreen = ({ navigation }) => {
                         <StatCard
                             title="Total Products"
                             value={products.length}
-                            icon="inventory"
-                            color="#007bff"
+                            icon="cube-outline"
+                            color="#3b82f6"
                             detailType="products"
                         />
 
                         <StatCard
                             title="Total Orders"
                             value={stats.totalOrders}
-                            icon="shopping-cart"
-                            color="#28a745"
+                            icon="cart-outline"
+                            color="#16a34a"
                             detailType="orders"
                         />
                         <StatCard
                             title="Revenue"
                             value={`Rs. ${stats.revenue.toLocaleString()}`}
-                            icon="attach-money"
-                            color="#ffc107"
+                            icon="cash-outline"
+                            color="#f59e0b"
                             detailType="revenue"
                         />
                         <StatCard
                             title="Low Stock"
                             value={stats.lowStock}
-                            icon="warning"
-                            color="#dc3545"
+                            icon="warning-outline"
+                            color="#dc2626"
                             detailType="low-stock"
                         />
                     </View>
@@ -355,41 +355,46 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         marginBottom: 20,
-        gap: 12,
     },
     statCard: {
         backgroundColor: '#ffffff',
         width: '48%',
-        padding: 16,
-        borderRadius: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        elevation: 2,
+        minHeight: 140,
+        padding: 20,
+        borderRadius: 18,
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
         borderTopWidth: 3,
+        marginBottom: 16,
+    },
+    statContent: {
+        flex: 1,
+        justifyContent: 'flex-start',
     },
     statIconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 14,
+        width: 52,
+        height: 52,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginBottom: 18,
     },
     statValue: {
-        fontSize: 19,
-        fontWeight: '700',
+        fontSize: 24,
+        fontWeight: '800',
         color: '#0f172a',
-        lineHeight: 24,
+        lineHeight: 30,
     },
     statTitle: {
-        fontSize: 12,
-        color: '#78809a',
-        fontWeight: '500',
-        marginTop: 2,
+        fontSize: 13,
+        color: '#64748b',
+        fontWeight: '600',
+        marginTop: 6,
         letterSpacing: 0.2,
     },
     heroContainer: {

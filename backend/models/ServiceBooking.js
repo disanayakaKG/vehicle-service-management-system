@@ -19,6 +19,10 @@ const serviceBookingSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    comment: {
+        type: String,
+        default: ''
+    },
     status: {
         type: String,
         enum: ['Booked', 'Cancelled'],

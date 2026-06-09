@@ -1,12 +1,13 @@
 import axios from 'axios';
 
 // Central BASE_URL for the backend API
-const FALLBACK_API_BASE_URL = "http://10.190.165.146:5000";
+const FALLBACK_API_BASE_URL = "http://192.168.8.146:5000"; // Changed to local backend IP
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || FALLBACK_API_BASE_URL;
 const BASE_URL = `${API_BASE_URL}/api`;
 
 const API = axios.create({
     baseURL: BASE_URL,
+    timeout: 5000, // 5 seconds timeout to prevent hanging if backend is unreachable
 });
 
 // Auth API Functions
@@ -21,6 +22,15 @@ export const loginUser = async (data) => {
 export const getUserProfile = async (token) => {
     return await API.get('/auth/profile', {
         headers: { Authorization: `Bearer ${token}` },
+    });
+};
+
+export const updateUserProfile = async (data, token) => {
+    return await API.put('/auth/profile', data, {
+        headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+        },
     });
 };
 

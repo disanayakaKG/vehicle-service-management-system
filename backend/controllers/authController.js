@@ -114,8 +114,53 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            user.name = req.body.name || user.name;
+            user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
+            
+            // Handle email update and uniqueness
+            if (req.body.email && req.body.email !== user.email) {
+                const emailExists = await User.findOne({ email: req.body.email.trim().toLowerCase() });
+                if (emailExists) {
+                    return res.status(400).json({ message: 'Email already in use' });
+                }
+                user.email = req.body.email.trim().toLowerCase();
+            }
+
+            // Handle image upload
+            if (req.file) {
+                user.profileImage = `/uploads/${req.file.filename}`;
+            }
+
+            const updatedUser = await user.save();
+
+            res.status(200).json({
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                phone: updatedUser.phone,
+                role: updatedUser.role,
+                profileImage: updatedUser.profileImage,
+                token: generateToken(updatedUser._id, updatedUser.role)
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
-    getUserProfile
+    getUserProfile,
+    updateUserProfile
 };

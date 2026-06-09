@@ -10,6 +10,7 @@ const RegisterScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('customer');
+    const [isLoading, setIsLoading] = useState(false);
     const { register } = useContext(AuthContext);
 
     const handleRegister = async () => {
@@ -20,6 +21,7 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
+        setIsLoading(true);
         // 2. Call register function
         const result = await register({
             name,
@@ -27,6 +29,7 @@ const RegisterScreen = ({ navigation }) => {
             password,
             role
         });
+        setIsLoading(false);
 
         if (!result.success) {
             Alert.alert('Registration Failed', result.message);
@@ -70,7 +73,7 @@ const RegisterScreen = ({ navigation }) => {
                 </TouchableOpacity>
             </View>
 
-            <CustomButton title="Register" onPress={handleRegister} />
+            <CustomButton title="Register" onPress={handleRegister} loading={isLoading} />
             
             <Text style={styles.link} onPress={() => navigation.navigate('Login')}>
                 Already have an account? Login here

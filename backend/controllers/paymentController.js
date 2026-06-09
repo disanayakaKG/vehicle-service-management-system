@@ -15,8 +15,8 @@ const createPayHereSession = async (req, res) => {
             shippingAddress
         } = req.body || {};
 
-        const merchantId = process.env.PAYHERE_MERCHANT_ID;
-        const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
+        const merchantId = process.env.PAYHERE_MERCHANT_ID?.trim();
+        const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET?.trim();
 
         if (!merchantId || !merchantSecret) {
             return res.status(500).json({
@@ -45,20 +45,19 @@ const createPayHereSession = async (req, res) => {
         const lastName = restNames.join(' ') || '-';
 
         const payload = {
-            sandbox: true,
             merchant_id: merchantId,
-            return_url: 'https://example.com/payhere-return',
-            cancel_url: 'https://example.com/payhere-cancel',
-            notify_url: 'https://example.com/payhere-notify',
+            return_url: 'http://localhost:3000/payhere-return',
+            cancel_url: 'http://localhost:3000/payhere-cancel',
+            notify_url: 'http://localhost:3000/payhere-notify',
             order_id: orderId,
             items: `Order ${orderId}`,
             currency,
             amount: amountString,
-            first_name: firstName || customerName,
-            last_name: lastName,
-            email: customerEmail,
-            phone: customerPhone || '',
-            address: shippingAddress || '',
+            first_name: firstName || customerName || 'Customer',
+            last_name: lastName !== '-' ? lastName : 'Name',
+            email: customerEmail || 'customer@example.com',
+            phone: customerPhone || '0700000000',
+            address: shippingAddress || 'Colombo',
             city: 'Colombo',
             country: 'Sri Lanka',
             hash

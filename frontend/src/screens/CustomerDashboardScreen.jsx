@@ -8,10 +8,11 @@ import {
   ScrollView,
   TextInput,
   Image,
-  Alert,
   Pressable,
+  Platform
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { ProductContext } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
@@ -29,404 +30,297 @@ const resolveImageUri = (image) => {
 const CustomerDashboardScreen = ({ navigation }) => {
   const { user } = useContext(AuthContext);
   const { products, fetchProducts } = useContext(ProductContext);
-  const { addToCart, buyNow, getCartItemCount } = useCart();
-  const [loading, setLoading] = useState(true);
+  const { addToCart, getCartItemCount } = useCart();
   const [searchTerm, setSearchTerm] = useState('');
+  const filteredProducts = products.filter((product) => {
+    return product.name?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-
       const loadProducts = async () => {
         try {
-          setLoading(true);
-          if (fetchProducts) {
-            await fetchProducts();
-          }
+          if (fetchProducts) await fetchProducts();
         } catch (error) {
           console.log('Customer dashboard product fetch error:', error);
-        } finally {
-          if (active) {
-            setLoading(false);
-          }
         }
       };
-
       loadProducts();
-
-      return () => {
-        active = false;
-      };
+      return () => { active = false; };
     }, [])
-  );
-
-  const filteredProducts = products.filter((product) =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleProductPress = (product) => {
     const productId = product._id || product.id;
-    if (productId) {
-      navigation.navigate('ProductDetails', { id: productId });
-    }
-  };
-
-  const handleAddCart = (product) => {
-    addToCart(product);
-    navigation.navigate('Cart');
-  };
-
-  const handleBuyNow = (product) => {
-    buyNow(product);
-    navigation.navigate('Cart');
+    if (productId) navigation.navigate('ProductDetails', { id: productId });
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.contentContainer} style={styles.container}>
-      <View style={styles.headerCard}>
-        <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.profileInitial}>{user?.name ? user.name.charAt(0).toUpperCase() : 'C'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerText}>
-          Welcome, <Text style={styles.headerName}>{user?.name || 'Customer'}</Text>
-        </Text>
-        <TouchableOpacity style={styles.headerCartButton} onPress={() => navigation.navigate('Cart')}>
-          <Text style={styles.headerCartButtonText}>
-            Cart{getCartItemCount() ? ` (${getCartItemCount()})` : ''}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.shortcutBar}>
-        <TouchableOpacity style={styles.shortcutButton} onPress={() => {}}>
-          <View style={styles.shortcutIconContainer}>
-            <Ionicons name="home-outline" size={20} color="#2563eb" />
-          </View>
-          <Text style={styles.shortcutLabel}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.shortcutButton} onPress={() => navigation.navigate('Cart')}>
-          <View style={styles.shortcutIconContainer}>
-            <Ionicons name="cart-outline" size={20} color="#2563eb" />
-          </View>
-          <Text style={styles.shortcutLabel}>Cart{getCartItemCount() ? ` (${getCartItemCount()})` : ''}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.shortcutButton} onPress={() => navigation.navigate('OrderHistory')}>
-          <View style={styles.shortcutIconContainer}>
-            <Ionicons name="receipt-outline" size={20} color="#2563eb" />
-          </View>
-          <Text style={styles.shortcutLabel}>Orders</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.shortcutButton} onPress={() => navigation.navigate('Services')}>
-          <View style={styles.shortcutIconContainer}>
-            <Ionicons name="calendar-outline" size={20} color="#2563eb" />
-          </View>
-          <Text style={styles.shortcutLabel}>Services</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchCard}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search spare parts..."
-          placeholderTextColor="#8da8d6"
-          value={searchTerm}
-          onChangeText={setSearchTerm}
-        />
-      </View>
-
-      <Text style={styles.sectionHeading}>Products</Text>
-
-      {loading ? (
-        <Text style={styles.statusText}>Loading products...</Text>
-      ) : filteredProducts.length === 0 ? (
-        <Text style={styles.statusText}>No products available</Text>
-      ) : (
-        <View style={styles.productsGrid}>
-          {filteredProducts.map((product) => {
-            const imageUri = resolveImageUri(product.image);
-            const productId = product._id || product.id;
-            return (
-              <TouchableOpacity
-                key={productId}
-                style={styles.productCard}
-                onPress={() => handleProductPress(product)}
-              >
-                {imageUri ? (
-                  <Image source={{ uri: imageUri }} style={styles.productImage} />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Text style={styles.placeholderText}>No Image</Text>
-                  </View>
-                )}
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={2}>
-                    {product.name}
+    <View style={styles.container}>
+      {/* Vibrant Red Header */}
+      <View style={styles.redHeader}>
+        <SafeAreaView>
+          <View style={styles.headerTopRow}>
+            <Text style={styles.welcomeText}>Welcome to CarParts.</Text>
+            <TouchableOpacity 
+              style={styles.headerAvatarWrapper} 
+              onPress={() => navigation.navigate('ProfileTab')}
+            >
+              {user?.profileImage ? (
+                <Image source={{ uri: resolveImageUri(user.profileImage) }} style={styles.headerAvatarImage} />
+              ) : (
+                <View style={styles.headerAvatarPlaceholder}>
+                  <Text style={styles.headerAvatarInitial}>
+                    {(user?.name || 'U').charAt(0).toUpperCase()}
                   </Text>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.productPrice}>Rs. {product.finalPrice ?? product.price ?? '0'}</Text>
-                    {product.price && product.finalPrice && product.price !== product.finalPrice && (
-                      <Text style={styles.originalPrice}>Rs. {product.price}</Text>
-                    )}
-                  </View>
-                  {product.rating != null && <Text style={styles.productRating}>⭐ {product.rating}</Text>}
-                  {product.stocks != null && <Text style={styles.productStock}>{product.stocks} available</Text>}
                 </View>
-                <View style={styles.buttonRow}>
-                  <Pressable
-                    style={styles.cartButton}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      handleAddCart(product);
-                    }}
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search parts"
+              placeholderTextColor="#94a3b8"
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+            />
+            <Ionicons name="mic-outline" size={20} color="#64748b" style={styles.micIcon} />
+            <Ionicons name="camera-outline" size={20} color="#64748b" />
+          </View>
+
+          {/* Filter Pills */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsContainer}>
+            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Make <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Model <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Year <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+            <TouchableOpacity style={styles.filterBtn}><Ionicons name="options-outline" size={16} color="#fff" /></TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+
+      {/* Main Content Area overlapping the header */}
+      <View style={styles.mainContent}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+
+          {/* Spare Parts Section */}
+          <View style={styles.recommendedSection}>
+            <Text style={[styles.sectionTitle, { paddingHorizontal: 20 }]}>Available Spare Parts</Text>
+            <View style={styles.recommendedGrid}>
+              {filteredProducts.map((product) => {
+                const imageUri = resolveImageUri(product.image);
+                const productId = product._id || product.id;
+                return (
+                  <TouchableOpacity
+                    key={productId}
+                    style={styles.productCard}
+                    onPress={() => handleProductPress(product)}
                   >
-                    <Text style={styles.cartButtonText}>Add Cart</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.buyNowButton}
-                    onPress={(event) => {
-                      event.stopPropagation();
-                      handleBuyNow(product);
-                    }}
-                  >
-                    <Text style={styles.buyNowButtonText}>Buy Now</Text>
-                  </Pressable>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-    </ScrollView>
+                    <View style={styles.productImageContainer}>
+                      {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.productImage} />
+                      ) : (
+                        <View style={styles.imagePlaceholder}><Ionicons name="car" size={40} color="#cbd5e1" /></View>
+                      )}
+                      <TouchableOpacity
+                        style={styles.favoriteBtn}
+                        onPress={() => addToCart(product)}
+                      >
+                        <Ionicons name="heart-outline" size={18} color="#000" />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                      <Text style={styles.productPrice}>Rs. {product.finalPrice ?? product.price ?? '0'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+        </ScrollView>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#eaf4ff',
+    backgroundColor: '#111111',
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 24,
+  redHeader: {
+    backgroundColor: '#111111',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 40 : 10,
+    paddingBottom: 40,
   },
-  headerCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginTop: 12,
-    marginBottom: 16,
+  welcomeText: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '800',
+    flex: 1,
+  },
+  headerTopRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    marginBottom: 20,
   },
-  profileButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#3b82f6',
+  headerAvatarWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    overflow: 'hidden',
+    marginLeft: 15,
+  },
+  headerAvatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  headerAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#1f2937',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  profileInitial: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+  headerAvatarInitial: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ef4444',
   },
-  headerText: {
-    fontSize: 16,
-    color: '#4b6cb7',
-    fontWeight: '500',
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 50,
+    marginBottom: 16,
   },
-  headerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  searchCard: {
-    backgroundColor: '#f2f8ff',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#d7e7ff',
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
-    fontSize: 16,
-    color: '#1f3a70',
+    flex: 1,
+    fontSize: 15,
+    color: '#0f172a',
   },
-  sectionHeading: {
+  micIcon: {
+    marginHorizontal: 10,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+  },
+  pill: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 10,
+  },
+  pillText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  filterBtn: {
+    borderWidth: 1,
+    borderColor: '#ffffff',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -20,
+    paddingTop: 24,
+    overflow: 'hidden',
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#12263a',
-    marginBottom: 12,
+    color: '#0f172a',
+    marginBottom: 16,
   },
-  statusText: {
-    color: '#64748b',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 20,
+  recommendedSection: {
+    marginBottom: 20,
   },
-  productsGrid: {
+  recommendedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
   productCard: {
-    width: '48%',
+    width: '48%', // 2 columns
     backgroundColor: '#ffffff',
     borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  productImageContainer: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#f1f5f9',
+    position: 'relative',
   },
   productImage: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#f2f8ff',
+    height: '100%',
+    resizeMode: 'cover',
   },
   imagePlaceholder: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#f2f8ff',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    color: '#64748b',
+  favoriteBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   productInfo: {
-    padding: 10,
+    padding: 12,
   },
   productName: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#12263a',
-    marginBottom: 6,
-    lineHeight: 18,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginBottom: 4,
   },
   productPrice: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#3b82f6',
-    marginBottom: 6,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
-  },
-  originalPrice: {
-    fontSize: 11,
-    color: '#999',
-    textDecorationLine: 'line-through',
-    fontWeight: '500',
-  },
-  productRating: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  productStock: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingBottom: 8,
-    gap: 6,
-  },
-  cartButton: {
-    flex: 1,
-    backgroundColor: '#e8f1ff',
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3b82f6',
-  },
-  cartButtonText: {
-    color: '#3b82f6',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerCartButton: {
-    marginLeft: 'auto',
-    backgroundColor: '#3b82f6',
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCartButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  buyNowButton: {
-    flex: 1,
-    backgroundColor: '#3b82f6',
-    borderRadius: 10,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  buyNowButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  shortcutBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 18,
-    backgroundColor: '#edf4ff',
-    marginVertical: 16,
-    elevation: 2,
-  },
-  shortcutButton: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    marginHorizontal: 4,
-    elevation: 3,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-  },
-  shortcutIconContainer: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  shortcutLabel: {
-    fontSize: 12,
-    color: '#1d4ed8',
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: '800',
+    color: '#0f172a',
   },
 });
 

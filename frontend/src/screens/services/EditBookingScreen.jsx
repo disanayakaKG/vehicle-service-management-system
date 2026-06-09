@@ -18,6 +18,7 @@ import { updateServiceBooking, getServiceAvailability } from '../../api/api';
 const DEFAULT_SLOTS = ['09:00', '11:00', '13:00', '15:00', '17:00'];
 
 const EditBookingScreen = ({ route, navigation }) => {
+    // Access authentication token for API requests
     const { token } = useContext(AuthContext);
     const { booking } = route.params || {};
     console.log('EditBookingScreen received booking:', booking);
@@ -29,7 +30,7 @@ const EditBookingScreen = ({ route, navigation }) => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [availableSlots, setAvailableSlots] = useState([]);
 
-    // Fetch slots when date changes
+    // Fetch available time slots when the selected date changes
     useEffect(() => {
         if (!isInitialized || !booking) return;
 
@@ -49,7 +50,7 @@ const EditBookingScreen = ({ route, navigation }) => {
                 }
 
                 setAvailableSlots(slots);
-                
+
                 // If currently selected slot is not available, reset or select first
                 if (slots.length > 0 && !slots.includes(selectedTimeSlot) && dateStr !== booking.bookingDate) {
                     setSelectedTimeSlot(slots[0]);
@@ -64,32 +65,32 @@ const EditBookingScreen = ({ route, navigation }) => {
         fetchSlots();
     }, [selectedDate, isInitialized, booking]);
 
-    // Initialize component state and timer
+    // Initialize component state (date, time slot) from existing booking data and start the edit timer
     useEffect(() => {
         if (!booking) {
             setIsInitialized(true);
             return;
         }
-        
+
         // Initialize date and time slot from booking
         setSelectedDate(new Date(booking.bookingDate || Date.now()));
         setSelectedTimeSlot(booking.timeSlot || '09:00');
-        
+
         // Calculate time left for editing
         if (!booking.createdAt) {
             setTimeLeft(0);
             setIsInitialized(true);
             return;
         }
-        
+
         const bookingTime = new Date(booking.createdAt);
         const currentTime = new Date();
         const elapsedSeconds = (currentTime - bookingTime) / 1000;
-        
+
         // For now, always start with 60 seconds regardless of elapsed time
         // This ensures the full 1-minute edit window
         const remainingTime = 60;
-        
+
         console.log('Timer Debug:', {
             bookingCreatedAt: booking.createdAt,
             bookingTime: bookingTime,
@@ -98,7 +99,7 @@ const EditBookingScreen = ({ route, navigation }) => {
             remainingTime: remainingTime,
             note: 'Timer fixed to always start at 60 seconds'
         });
-        
+
         setTimeLeft(remainingTime);
         setIsInitialized(true);
 
@@ -127,13 +128,16 @@ const EditBookingScreen = ({ route, navigation }) => {
         }
     }, [booking]);
 
+    // Helper function to format a Date object to YYYY-MM-DD string
     const formatDate = (date) => {
+        if (!date) return '';
         const year = date.getFullYear();
         const month = `${date.getMonth() + 1}`.padStart(2, '0');
         const day = `${date.getDate()}`.padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
 
+    // Handles the selection of a new date from the DateTimePicker modal
     const handleDateChange = (event, selectedDate) => {
         console.log('Date picker changed:', { event, selectedDate });
         setShowDatePicker(false);
@@ -150,12 +154,14 @@ const EditBookingScreen = ({ route, navigation }) => {
         }
     };
 
+    // Returns today's date with time set to 00:00:00, used as the minimum selectable date in the picker
     const getMinimumDate = () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return today;
     };
 
+    // Submits the updated booking details (date and time slot) to the backend API
     const handleUpdateBooking = async () => {
         if (timeLeft <= 0) {
             Alert.alert('Edit Window Expired', 'The 1-minute edit window has expired.');
@@ -197,6 +203,7 @@ const EditBookingScreen = ({ route, navigation }) => {
 
     return (
         <View style={styles.container}>
+            {/* Header Section */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color="#0f172a" />
@@ -204,6 +211,7 @@ const EditBookingScreen = ({ route, navigation }) => {
                 <Text style={styles.title}>Edit Booking</Text>
             </View>
 
+            {/* Countdown Timer Display */}
             <View style={[
                 styles.timerContainer,
                 { borderColor: timeLeft <= 10 ? '#ef4444' : '#2563eb' }
@@ -220,6 +228,7 @@ const EditBookingScreen = ({ route, navigation }) => {
             </View>
 
             <ScrollView style={styles.content}>
+                {/* Current Booking Details Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Service Details</Text>
                     <View style={styles.detailRow}>
@@ -236,10 +245,11 @@ const EditBookingScreen = ({ route, navigation }) => {
                     </View>
                 </View>
 
+                {/* Form Section to Update Date and Time Slot */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Update Booking Time</Text>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         style={styles.dateSelector}
                         onPress={() => setShowDatePicker(true)}
                     >
@@ -275,6 +285,7 @@ const EditBookingScreen = ({ route, navigation }) => {
                     )}
                 </View>
 
+                {/* Submit Update Button */}
                 <TouchableOpacity
                     style={[
                         styles.updateButton,
@@ -293,6 +304,7 @@ const EditBookingScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
             </ScrollView>
 
+            {/* Date Picker Modal */}
             <Modal
                 visible={showDatePicker}
                 transparent={true}
@@ -316,6 +328,7 @@ const EditBookingScreen = ({ route, navigation }) => {
                                 onChange={handleDateChange}
                                 style={styles.datePicker}
                                 textColor="#0f172a"
+                                themeVariant="light"
                                 positiveButton={{ label: 'OK', textColor: '#2563eb' }}
                                 negativeButton={{ label: 'Cancel', textColor: '#64748b' }}
                             />

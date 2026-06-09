@@ -14,6 +14,7 @@ const CheckoutScreen = ({ navigation }) => {
     const [shippingAddress, setShippingAddress] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
 
     // Auto-fill customer info if user is logged in
     useEffect(() => {
@@ -43,6 +44,80 @@ const CheckoutScreen = ({ navigation }) => {
         paymentMethod,
     };
 
+    // Validation functions
+    const validateName = (name) => {
+        if (!name || name.trim().length === 0) {
+            return 'Name is required';
+        }
+        if (name.trim().length < 2) {
+            return 'Name must be at least 2 characters long';
+        }
+        if (name.trim().length > 50) {
+            return 'Name must be less than 50 characters';
+        }
+        if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+            return 'Name can only contain letters and spaces';
+        }
+        return '';
+    };
+
+    const validateEmail = (email) => {
+        if (!email || email.trim().length === 0) {
+            return 'Email is required';
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            return 'Please enter a valid email address';
+        }
+        return '';
+    };
+
+    const validatePhone = (phone) => {
+        if (!phone || phone.trim().length === 0) {
+            return 'Phone number is required';
+        }
+        // Remove spaces, dashes, and parentheses for validation
+        const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+        // Sri Lankan phone number validation (exactly 10 digits starting with 0, or starts with +94 with 9 digits)
+        const phoneRegex = /^(?:0\d{9}|\+94\d{9})$/;
+        if (!phoneRegex.test(cleanPhone)) {
+            return 'Phone number must be exactly 10 digits (starting with 0)';
+        }
+        return '';
+    };
+
+    const validateAddress = (address) => {
+        if (!address || address.trim().length === 0) {
+            return 'Shipping address is required';
+        }
+        if (address.trim().length < 10) {
+            return 'Please enter a complete shipping address';
+        }
+        if (address.trim().length > 200) {
+            return 'Address must be less than 200 characters';
+        }
+        return '';
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        const nameError = validateName(customerName);
+        if (nameError) newErrors.name = nameError;
+        
+        const emailError = validateEmail(customerEmail);
+        if (emailError) newErrors.email = emailError;
+        
+        const phoneError = validatePhone(customerPhone);
+        if (phoneError) newErrors.phone = phoneError;
+        
+        const addressError = validateAddress(shippingAddress);
+        if (addressError) newErrors.address = addressError;
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handlePlaceOrder = async () => {
         // Check if user is authenticated
         if (!token || !user) {
@@ -51,8 +126,9 @@ const CheckoutScreen = ({ navigation }) => {
             return;
         }
 
-        if (!customerName || !customerEmail || !customerPhone || !shippingAddress) {
-            Alert.alert('Missing information', 'Please fill in all checkout fields.');
+        // Validate form
+        if (!validateForm()) {
+            Alert.alert('Validation Error', 'Please correct the errors in the form.');
             return;
         }
 
@@ -134,33 +210,57 @@ const CheckoutScreen = ({ navigation }) => {
                     </View>
                 </View>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, errors.name && styles.inputError]}
                     placeholder="Name"
                     value={customerName}
-                    onChangeText={setCustomerName}
+                    onChangeText={(text) => {
+                        setCustomerName(text);
+                        if (errors.name) {
+                            setErrors(prev => ({ ...prev, name: '' }));
+                        }
+                    }}
                 />
+                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, errors.email && styles.inputError]}
                     placeholder="Email"
                     keyboardType="email-address"
                     value={customerEmail}
-                    onChangeText={setCustomerEmail}
+                    onChangeText={(text) => {
+                        setCustomerEmail(text);
+                        if (errors.email) {
+                            setErrors(prev => ({ ...prev, email: '' }));
+                        }
+                    }}
                 />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, errors.phone && styles.inputError]}
                     placeholder="Phone"
                     keyboardType="phone-pad"
                     value={customerPhone}
-                    onChangeText={setCustomerPhone}
+                    onChangeText={(text) => {
+                        setCustomerPhone(text);
+                        if (errors.phone) {
+                            setErrors(prev => ({ ...prev, phone: '' }));
+                        }
+                    }}
                 />
+                {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
                 <TextInput
-                    style={[styles.input, styles.multilineInput]}
+                    style={[styles.input, styles.multilineInput, errors.address && styles.inputError]}
                     placeholder="Shipping Address"
                     value={shippingAddress}
-                    onChangeText={setShippingAddress}
+                    onChangeText={(text) => {
+                        setShippingAddress(text);
+                        if (errors.address) {
+                            setErrors(prev => ({ ...prev, address: '' }));
+                        }
+                    }}
                     multiline
                     numberOfLines={3}
                 />
+                {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
             </View>
 
             <View style={styles.sectionCard}>
@@ -399,6 +499,17 @@ const styles = StyleSheet.create({
         color: '#64748b',
         textAlign: 'center',
         marginBottom: 20,
+    },
+    inputError: {
+        borderColor: '#ef4444',
+        backgroundColor: '#fef2f2',
+    },
+    errorText: {
+        color: '#ef4444',
+        fontSize: 12,
+        marginTop: -8,
+        marginBottom: 8,
+        marginLeft: 4,
     },
 });
 

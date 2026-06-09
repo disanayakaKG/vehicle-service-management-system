@@ -96,7 +96,7 @@ const getAvailability = async (req, res) => {
 
 const createBooking = async (req, res) => {
     try {
-        const { date, timeSlot } = req.body;
+        const { date, timeSlot, comment } = req.body;
         const { id } = req.params;
 
         if (!date || !timeSlot) {
@@ -127,7 +127,8 @@ const createBooking = async (req, res) => {
             service: id,
             customer: req.user._id,
             bookingDate: date,
-            timeSlot
+            timeSlot,
+            comment: comment || ''
         });
 
         const populated = await booking.populate('service customer', 'name email');
@@ -177,7 +178,7 @@ const updateBooking = async (req, res) => {
             return res.status(403).json({ message: 'Edit window has expired. You can only edit bookings within 1 minute of booking.' });
         }
 
-        const { bookingDate, timeSlot } = req.body;
+        const { bookingDate, timeSlot, comment } = req.body;
         
         if (bookingDate && timeSlot) {
             if (!DEFAULT_SLOTS.includes(timeSlot)) {
@@ -218,6 +219,10 @@ const updateBooking = async (req, res) => {
             }
 
             booking.timeSlot = timeSlot;
+        }
+
+        if (comment !== undefined) {
+            booking.comment = comment;
         }
 
         await booking.save();

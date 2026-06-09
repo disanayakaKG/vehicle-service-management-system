@@ -8,6 +8,7 @@ import { validateRequired } from '../utils/validation';
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useContext(AuthContext);
 
     const handleLogin = async () => {
@@ -17,8 +18,11 @@ const LoginScreen = ({ navigation }) => {
             return;
         }
 
+        setIsLoading(true);
         // 2. Call login function
         const result = await login(email, password);
+        setIsLoading(false);
+        
         if (!result.success) {
             Alert.alert('Login Failed', result.message);
         }
@@ -40,7 +44,7 @@ const LoginScreen = ({ navigation }) => {
                 secureTextEntry
             />
 
-            <CustomButton title="Login" onPress={handleLogin} />
+            <CustomButton title="Login" onPress={handleLogin} loading={isLoading} />
 
             <Text style={styles.link} onPress={() => navigation.navigate('Register')}>
                 Don't have an account? Register here

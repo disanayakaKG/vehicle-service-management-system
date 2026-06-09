@@ -193,6 +193,8 @@ const AddProductScreen = ({ navigation }) => {
                         title={form.image?.uri ? 'Change Image' : 'Select Product Image'}
                         onPress={handleSelectImage}
                     />
+                    <Text style={styles.helperText}>Only JPG, JPEG, or PNG images are allowed</Text>
+                    <Text style={styles.helperText}>Image size must be less than 5MB</Text>
                     {form.image?.uri ? (
                         <View style={styles.imagePreviewWrapper}>
                             <Image source={{ uri: form.image.uri }} style={styles.imagePreview} />
@@ -409,6 +411,12 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#4a5568',
         marginBottom: 8,
+        marginLeft: 4,
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#6b7280',
+        marginTop: 4,
         marginLeft: 4,
     },
     selectInput: {

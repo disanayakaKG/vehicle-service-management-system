@@ -16,6 +16,7 @@ import { AuthContext } from '../../context/AuthContext';
 import { ProductContext } from '../../context/ProductContext';
 import { useCart } from '../../context/CartContext';
 import { getProductById, API_BASE_URL, getReviewsByProduct, createReview, updateReview, deleteReview } from '../../api/api';
+import { getMyOrders } from '../../api/orderApi';
 import CustomButton from '../../components/CustomButton';
 
 // Safe helper to resolve full image URL for display
@@ -42,6 +43,8 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     const [selectedRating, setSelectedRating] = useState(5);
     const [reviewComment, setReviewComment] = useState('');
     const [editingReviewId, setEditingReviewId] = useState(null);
+    const [hasPurchasedProduct, setHasPurchasedProduct] = useState(false);
+    const [purchaseCheckLoading, setPurchaseCheckLoading] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -106,6 +109,33 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     useEffect(() => {
         loadReviews();
     }, [productId]);
+
+    const checkPurchaseStatus = async () => {
+        if (!user || !token || !productId) {
+            setHasPurchasedProduct(false);
+            return;
+        }
+
+        setPurchaseCheckLoading(true);
+        try {
+            const orders = await getMyOrders(token);
+            const hasPurchased = orders.some(order => 
+                order.orderStatus === 'Delivered' && 
+                order.deliveryStatus === 'Delivered' &&
+                order.items.some(item => item.productId === productId || item.productId === product?.productId)
+            );
+            setHasPurchasedProduct(hasPurchased);
+        } catch (error) {
+            console.error('Error checking purchase status:', error);
+            setHasPurchasedProduct(false);
+        } finally {
+            setPurchaseCheckLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        checkPurchaseStatus();
+    }, [user, token, productId, product]);
 
     if (loading) {
         return (
@@ -419,32 +449,45 @@ const ProductDetailsScreen = ({ route, navigation }) => {
 
                 {isCustomer && (
                     <View style={styles.reviewFormContainer}>
-                        <Text style={styles.sectionTitle}>Write a Review</Text>
-                        <StarRating rating={selectedRating} editable={true} onRatingChange={setSelectedRating} />
-                        <TextInput
-                            style={styles.commentInput}
-                            placeholder="Write your review comment here..."
-                            value={reviewComment}
-                            onChangeText={setReviewComment}
-                            multiline
-                            numberOfLines={4}
-                        />
-                        <TouchableOpacity 
-                            style={[styles.submitButton, reviewLoading && styles.disabledButton]} 
-                            onPress={handleSubmitReview}
-                            disabled={reviewLoading}
-                        >
-                            <Text style={styles.submitButtonText}>
-                                {reviewLoading ? 'Submitting...' : editingReviewId ? 'Update Review' : 'Submit Review'}
-                            </Text>
-                        </TouchableOpacity>
-                        {editingReviewId && (
-                            <TouchableOpacity 
-                                style={styles.cancelButton} 
-                                onPress={handleCancelEdit}
-                            >
-                                <Text style={styles.cancelButtonText}>Cancel Edit</Text>
-                            </TouchableOpacity>
+                        {purchaseCheckLoading ? (
+                            <Text style={styles.noReviewsText}>Checking purchase status...</Text>
+                        ) : hasPurchasedProduct ? (
+                            <>
+                                <Text style={styles.sectionTitle}>Write a Review</Text>
+                                <StarRating rating={selectedRating} editable={true} onRatingChange={setSelectedRating} />
+                                <TextInput
+                                    style={styles.commentInput}
+                                    placeholder="Write your review comment here..."
+                                    value={reviewComment}
+                                    onChangeText={setReviewComment}
+                                    multiline
+                                    numberOfLines={4}
+                                />
+                                <TouchableOpacity 
+                                    style={[styles.submitButton, reviewLoading && styles.disabledButton]} 
+                                    onPress={handleSubmitReview}
+                                    disabled={reviewLoading}
+                                >
+                                    <Text style={styles.submitButtonText}>
+                                        {reviewLoading ? 'Submitting...' : editingReviewId ? 'Update Review' : 'Submit Review'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {editingReviewId && (
+                                    <TouchableOpacity 
+                                        style={styles.cancelButton} 
+                                        onPress={handleCancelEdit}
+                                    >
+                                        <Text style={styles.cancelButtonText}>Cancel Edit</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </>
+                        ) : (
+                            <View>
+                                <Text style={styles.sectionTitle}>Write a Review</Text>
+                                <Text style={styles.noReviewsText}>
+                                    You can only review products you have purchased and received.
+                                </Text>
+                            </View>
                         )}
                     </View>
                 )}
