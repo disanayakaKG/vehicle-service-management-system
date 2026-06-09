@@ -45,6 +45,7 @@ const ProductDetailsScreen = ({ route, navigation }) => {
     const [editingReviewId, setEditingReviewId] = useState(null);
     const [hasPurchasedProduct, setHasPurchasedProduct] = useState(false);
     const [purchaseCheckLoading, setPurchaseCheckLoading] = useState(false);
+    const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -392,9 +393,19 @@ const ProductDetailsScreen = ({ route, navigation }) => {
                     <View style={styles.divider} />
 
                     <Text style={styles.sectionTitle}>Description</Text>
-                    <Text style={styles.descriptionText}>
+                    <Text 
+                        style={styles.descriptionText}
+                        numberOfLines={isDescriptionExpanded ? undefined : 3}
+                    >
                         {product.description || 'No description provided for this product.'}
                     </Text>
+                    {(product.description && product.description.length > 100) && (
+                        <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
+                            <Text style={styles.readMoreText}>
+                                {isDescriptionExpanded ? 'Show less' : 'Read more'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 <View style={styles.actionContainer}>
@@ -650,6 +661,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#4A5568',
         lineHeight: 22,
+    },
+    readMoreText: {
+        color: '#3B82F6',
+        marginTop: 8,
+        fontWeight: 'bold',
+        fontSize: 14,
     },
     actionContainer: {
         paddingHorizontal: 20,
