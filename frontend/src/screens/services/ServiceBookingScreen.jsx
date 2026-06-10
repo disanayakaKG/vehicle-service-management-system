@@ -719,6 +719,7 @@ const ServiceBookingScreen = ({ navigation }) => {
                                 onChange={onDateChange}
                                 style={styles.datePicker}
                                 textColor="#0f172a"
+                                themeVariant="light"
                             />
                         </View>
                     </View>
