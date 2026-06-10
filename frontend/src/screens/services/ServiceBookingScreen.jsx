@@ -104,13 +104,13 @@ const ServiceBookingScreen = ({ navigation }) => {
     const checkmarkScale = useRef(new Animated.Value(0)).current;
 
     const headerTranslateY = scrollY.interpolate({
-        inputRange: [0, 150],
-        outputRange: [0, -100],
+        inputRange: [0, 120],
+        outputRange: [0, -80], // Stop translating before the search bar hits the status bar
         extrapolate: 'clamp',
     });
     
     const headerOpacity = scrollY.interpolate({
-        inputRange: [0, 100],
+        inputRange: [0, 80],
         outputRange: [1, 0],
         extrapolate: 'clamp',
     });
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
     },
 
     listContainer: {
-        paddingTop: Platform.OS === 'android' ? 200 : 180, // Space for absolute header
+        paddingTop: Platform.OS === 'android' ? 280 : 240, // Guarantee absolute header doesn't overlap on safe area notches
         paddingHorizontal: 20,
         paddingBottom: 40,
     },
