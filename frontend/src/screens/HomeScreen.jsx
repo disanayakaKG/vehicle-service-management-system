@@ -8,8 +8,12 @@ import {
     Modal,
     TouchableWithoutFeedback,
     RefreshControl,
-    ActivityIndicator
+    ActivityIndicator,
+    Animated,
+    Pressable
 } from 'react-native';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { AuthContext } from '../context/AuthContext';
 import { ProductContext } from '../context/ProductContext';
 import { getDashboardOverview } from '../api/api';
@@ -79,18 +83,22 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const StatCard = ({ title, value, icon, color, detailType }) => (
-        <TouchableOpacity
-            style={[styles.statCard, { borderTopColor: color }]}
+        <Pressable
             onPress={() => navigation.navigate('AdminDashboardDetails', { type: detailType, title })}
+            style={{ width: '48%', marginBottom: 16 }}
         >
-            <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-                <Ionicons name={icon} size={24} color={color} />
-            </View>
-            <View style={styles.statContent}>
-                <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
-                <Text style={styles.statTitle} numberOfLines={1}>{title}</Text>
-            </View>
-        </TouchableOpacity>
+            {({ pressed }) => (
+                <Animated.View style={[styles.statCard, { borderTopColor: color, transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
+                    <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
+                        <Ionicons name={icon} size={24} color={color} />
+                    </View>
+                    <View style={styles.statContent}>
+                        <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+                        <Text style={styles.statTitle} numberOfLines={1}>{title}</Text>
+                    </View>
+                </Animated.View>
+            )}
+        </Pressable>
     );
 
     if (user?.role === "customer") {
@@ -105,21 +113,21 @@ const HomeScreen = ({ navigation }) => {
                     style={styles.profileBtn}
                     onPress={() => navigation.navigate('Profile')}
                 >
-                    <Ionicons name="person-circle" size={40} color="#007bff" />
+                    <Ionicons name="person-circle" size={40} color="#EF4444" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                     style={styles.menuBtn}
                     onPress={() => setMenuVisible(true)}
                 >
-                    <Ionicons name="menu" size={28} color="#333" />
+                    <Ionicons name="menu" size={28} color="#111111" />
                 </TouchableOpacity>
             </View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007bff']} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#EF4444']} />
                 }
             >
                 <View style={styles.header}>
@@ -129,7 +137,7 @@ const HomeScreen = ({ navigation }) => {
 
                 {loading && !refreshing ? (
                     <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="large" color="#007bff" />
+                        <ActivityIndicator size="large" color="#EF4444" />
                         <Text style={styles.loaderText}>Loading dashboard overview...</Text>
                     </View>
                 ) : error ? (
@@ -146,7 +154,7 @@ const HomeScreen = ({ navigation }) => {
                             title="Total Products"
                             value={products.length}
                             icon="cube-outline"
-                            color="#3b82f6"
+                            color="#111111"
                             detailType="products"
                         />
 
@@ -183,7 +191,7 @@ const HomeScreen = ({ navigation }) => {
                 {/* Info Card */}
                 <View style={styles.heroContainer}>
                     <View style={styles.heroCircle}>
-                        <Ionicons name="analytics" size={60} color="#007bff" />
+                        <Ionicons name="analytics" size={60} color="#EF4444" />
                     </View>
                     <View style={styles.heroInfo}>
                         <Text style={styles.heroTitle}>System Status: Live</Text>
@@ -221,7 +229,7 @@ const HomeScreen = ({ navigation }) => {
                                         <Ionicons
                                             name={item.icon}
                                             size={22}
-                                            color={item.title === 'Logout' ? '#dc3545' : '#007bff'}
+                                            color={item.title === 'Logout' ? '#dc3545' : '#111111'}
                                             style={styles.menuIcon}
                                         />
                                         <Text style={[
@@ -295,7 +303,7 @@ const styles = StyleSheet.create({
     },
     role: {
         fontSize: 14,
-        color: '#0066cc',
+        color: '#EF4444',
         marginTop: 6,
         fontWeight: '600',
         letterSpacing: 0.3,
@@ -335,12 +343,12 @@ const styles = StyleSheet.create({
     },
     retryBtn: {
         marginTop: 18,
-        backgroundColor: '#0066cc',
+        backgroundColor: '#111111',
         paddingHorizontal: 24,
         paddingVertical: 10,
         borderRadius: 10,
         elevation: 2,
-        shadowColor: '#0066cc',
+        shadowColor: '#111111',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -358,7 +366,7 @@ const styles = StyleSheet.create({
     },
     statCard: {
         backgroundColor: '#ffffff',
-        width: '48%',
+        width: '100%',
         minHeight: 140,
         padding: 20,
         borderRadius: 18,
@@ -370,7 +378,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 12,
         borderTopWidth: 3,
-        marginBottom: 16,
     },
     statContent: {
         flex: 1,
@@ -415,13 +422,13 @@ const styles = StyleSheet.create({
     heroCircle: {
         width: 88,
         height: 88,
-        backgroundColor: '#eef4ff',
+        backgroundColor: '#fee2e2',
         borderRadius: 44,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 20,
         elevation: 1,
-        shadowColor: '#0066cc',
+        shadowColor: '#EF4444',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 6,

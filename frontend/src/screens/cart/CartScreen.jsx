@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Animated, Pressable } from 'react-native';
 import { useCart } from '../../context/CartContext';
 import { API_BASE_URL } from '../../api/api';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const resolveImageUri = (image) => {
     if (!image || typeof image !== 'string') return null;
@@ -37,24 +39,27 @@ const CartScreen = ({ navigation }) => {
                     <Text style={styles.itemText}>Quantity: {item.quantity}</Text>
                     <Text style={styles.itemText}>Subtotal: ${subtotal.toFixed(2)}</Text>
                     <View style={styles.quantityRow}>
-                        <TouchableOpacity
-                            style={styles.quantityButton}
-                            onPress={() => decreaseQuantity(item.productId)}
-                        >
-                            <Text style={styles.quantityButtonText}>-</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.quantityButton}
-                            onPress={() => increaseQuantity(item.productId)}
-                        >
-                            <Text style={styles.quantityButtonText}>+</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={styles.removeButton}
-                            onPress={() => removeFromCart(item.productId)}
-                        >
-                            <Text style={styles.removeButtonText}>Remove</Text>
-                        </TouchableOpacity>
+                        <Pressable onPress={() => decreaseQuantity(item.productId)}>
+                            {({ pressed }) => (
+                                <Animated.View style={[styles.quantityButton, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+                                    <Text style={styles.quantityButtonText}>-</Text>
+                                </Animated.View>
+                            )}
+                        </Pressable>
+                        <Pressable onPress={() => increaseQuantity(item.productId)}>
+                            {({ pressed }) => (
+                                <Animated.View style={[styles.quantityButton, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}>
+                                    <Text style={styles.quantityButtonText}>+</Text>
+                                </Animated.View>
+                            )}
+                        </Pressable>
+                        <Pressable onPress={() => removeFromCart(item.productId)}>
+                            {({ pressed }) => (
+                                <Animated.View style={[styles.removeButton, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+                                    <Text style={styles.removeButtonText}>Remove</Text>
+                                </Animated.View>
+                            )}
+                        </Pressable>
                     </View>
                 </View>
             </View>
@@ -68,9 +73,13 @@ const CartScreen = ({ navigation }) => {
                     <Text style={styles.emptyIcon}>🛍️</Text>
                     <Text style={styles.emptyTitle}>Your cart is empty</Text>
                     <Text style={styles.emptySubtitle}>Add items to your cart to place an order.</Text>
-                    <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
-                        <Text style={styles.primaryButtonText}>Continue Shopping</Text>
-                    </TouchableOpacity>
+                    <Pressable onPress={() => navigation.goBack()} style={{ width: '100%' }}>
+                        {({ pressed }) => (
+                            <Animated.View style={[styles.primaryButton, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                                <Text style={styles.primaryButtonText}>Continue Shopping</Text>
+                            </Animated.View>
+                        )}
+                    </Pressable>
                 </View>
             </View>
         );
@@ -105,16 +114,28 @@ const CartScreen = ({ navigation }) => {
                     </View>
                 </View>
                 <View style={styles.footerButtons}>
-                    <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.goBack()}>
-                        <Text style={styles.secondaryButtonText}>Continue</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.clearButton} onPress={clearCart}>
-                        <Text style={styles.clearButtonText}>Clear Cart</Text>
-                    </TouchableOpacity>
+                    <Pressable style={{ flex: 1, marginRight: 10 }} onPress={() => navigation.goBack()}>
+                        {({ pressed }) => (
+                            <Animated.View style={[styles.secondaryButton, { marginRight: 0, transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+                                <Text style={styles.secondaryButtonText}>Continue</Text>
+                            </Animated.View>
+                        )}
+                    </Pressable>
+                    <Pressable style={{ flex: 1 }} onPress={clearCart}>
+                        {({ pressed }) => (
+                            <Animated.View style={[styles.clearButton, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}>
+                                <Text style={styles.clearButtonText}>Clear Cart</Text>
+                            </Animated.View>
+                        )}
+                    </Pressable>
                 </View>
-                <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('Checkout')}>
-                    <Text style={styles.primaryButtonText}>Checkout</Text>
-                </TouchableOpacity>
+                <Pressable onPress={() => navigation.navigate('Checkout')}>
+                    {({ pressed }) => (
+                        <Animated.View style={[styles.primaryButton, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                            <Text style={styles.primaryButtonText}>Checkout</Text>
+                        </Animated.View>
+                    )}
+                </Pressable>
             </View>
         </View>
     );
@@ -123,7 +144,7 @@ const CartScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#e8f4ff',
+        backgroundColor: '#f8fafc',
     },
     listContent: {
         paddingHorizontal: 16,
@@ -153,7 +174,7 @@ const styles = StyleSheet.create({
         height: 100,
         borderRadius: 16,
         marginRight: 14,
-        backgroundColor: '#dbeafe',
+        backgroundColor: '#f1f5f9',
     },
     itemDetails: {
         flex: 1,
@@ -179,13 +200,13 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 10,
-        backgroundColor: '#dbeafe',
+        backgroundColor: '#fee2e2',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 8,
     },
     quantityButtonText: {
-        color: '#1d4ed8',
+        color: '#EF4444',
         fontSize: 18,
         fontWeight: '700',
     },
@@ -244,7 +265,7 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
     primaryButton: {
-        backgroundColor: '#2563eb',
+        backgroundColor: '#EF4444',
         paddingVertical: 14,
         borderRadius: 16,
         alignItems: 'center',
@@ -255,31 +276,28 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     secondaryButton: {
-        flex: 1,
         backgroundColor: '#fff',
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#c7d2fe',
+        borderColor: '#fca5a5',
         paddingVertical: 12,
         alignItems: 'center',
-        marginRight: 10,
     },
     secondaryButtonText: {
-        color: '#2563eb',
+        color: '#EF4444',
         fontWeight: '700',
         fontSize: 14,
     },
     clearButton: {
-        flex: 1,
         backgroundColor: '#f8fafc',
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: '#c7d2fe',
+        borderColor: '#fca5a5',
         paddingVertical: 12,
         alignItems: 'center',
     },
     clearButtonText: {
-        color: '#2563eb',
+        color: '#EF4444',
         fontWeight: '700',
         fontSize: 14,
     },
@@ -303,13 +321,13 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     headerBadge: {
-        backgroundColor: '#dbeafe',
+        backgroundColor: '#fee2e2',
         borderRadius: 20,
         paddingHorizontal: 14,
         paddingVertical: 8,
     },
     headerBadgeText: {
-        color: '#1d4ed8',
+        color: '#EF4444',
         fontWeight: '700',
     },
     emptyContainer: {
@@ -317,7 +335,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
-        backgroundColor: '#e8f4ff',
+        backgroundColor: '#f8fafc',
     },
     emptyCard: {
         width: '100%',

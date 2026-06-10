@@ -458,7 +458,7 @@ const ServiceManagementScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f1f5f9', padding: 16 },
+    container: { flex: 1, backgroundColor: '#f8fafc', padding: 16 },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     backButton: { marginRight: 10, padding: 4 },
     title: { fontSize: 22, fontWeight: '800', color: '#0f172a' },

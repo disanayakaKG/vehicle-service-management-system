@@ -1,8 +1,10 @@
 import React, { useContext, useState } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, Image, 
-    TextInput, Alert, ActivityIndicator, ScrollView, Platform, SafeAreaView, Modal, TouchableWithoutFeedback
+    TextInput, Alert, ActivityIndicator, ScrollView, Platform, SafeAreaView, Modal, TouchableWithoutFeedback, Animated, Pressable
 } from 'react-native';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 import { AuthContext } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -77,8 +79,21 @@ const ProfileScreen = ({ navigation }) => {
         }
     };
 
-    const handleLogout = async () => {
-        await logout();
+    const handleLogout = () => {
+        Alert.alert(
+            "Log Out",
+            "Are you sure you want to log out of your account?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Log Out", 
+                    style: "destructive",
+                    onPress: async () => {
+                        await logout();
+                    }
+                }
+            ]
+        );
     };
 
     const displayImage = profileImage?.uri || resolveImageUri(user?.profileImage);
@@ -179,10 +194,14 @@ const ProfileScreen = ({ navigation }) => {
                                 </View>
                             </View>
 
-                            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-                                <Ionicons name="log-out-outline" size={22} color="#ef4444" />
-                                <Text style={styles.logoutText}>Log Out</Text>
-                            </TouchableOpacity>
+                            <Pressable onPress={handleLogout} style={{ width: '100%' }}>
+                                {({ pressed }) => (
+                                    <Animated.View style={[styles.logoutBtn, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                                        <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+                                        <Text style={styles.logoutText}>Log Out</Text>
+                                    </Animated.View>
+                                )}
+                            </Pressable>
                         </View>
                     ) : (
                         <View style={styles.editModeContainer}>
@@ -220,20 +239,24 @@ const ProfileScreen = ({ navigation }) => {
                                 />
                             </View>
 
-                            <TouchableOpacity 
-                                style={styles.updateBtn} 
+                            <Pressable 
                                 onPress={handleUpdateProfile}
                                 disabled={loading}
+                                style={{ width: '100%', marginTop: 12 }}
                             >
-                                {loading ? (
-                                    <ActivityIndicator color="#fff" size="small" />
-                                ) : (
-                                    <>
-                                        <Text style={styles.updateBtnText}>Save Changes</Text>
-                                        <Ionicons name="checkmark-circle" size={22} color="#fff" />
-                                    </>
+                                {({ pressed }) => (
+                                    <Animated.View style={[styles.updateBtn, { marginTop: 0, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                                        {loading ? (
+                                            <ActivityIndicator color="#fff" size="small" />
+                                        ) : (
+                                            <>
+                                                <Text style={styles.updateBtnText}>Save Changes</Text>
+                                                <Ionicons name="checkmark-circle" size={22} color="#fff" />
+                                            </>
+                                        )}
+                                    </Animated.View>
                                 )}
-                            </TouchableOpacity>
+                            </Pressable>
                         </View>
                     )}
 

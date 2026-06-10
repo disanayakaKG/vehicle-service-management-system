@@ -54,20 +54,28 @@ const MainTabNavigator = () => {
                 tabBarActiveTintColor: '#ef4444',
                 tabBarInactiveTintColor: '#64748b',
                 tabBarStyle: {
+                    position: 'absolute',
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                    backgroundColor: '#ffffff',
+                    borderRadius: 30,
+                    height: 65,
                     borderTopWidth: 0,
                     elevation: 10,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -4 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 10,
-                    backgroundColor: '#ffffff',
-                    height: 60,
-                    paddingBottom: 8,
-                    paddingTop: 8,
+                    shadowColor: '#111111',
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 20,
+                    paddingBottom: 0,
                 },
                 tabBarLabelStyle: {
                     fontSize: 12,
-                    fontWeight: '600',
+                    fontWeight: '700',
+                    marginBottom: 8,
+                },
+                tabBarItemStyle: {
+                    paddingTop: 8,
                 }
             })}
         >

@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useState } from 'react';
+import React, { useCallback, useContext, useState, useRef, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
@@ -9,8 +9,13 @@ import {
   TextInput,
   Image,
   Pressable,
-  Platform
+  Platform,
+  Animated,
+  Dimensions
 } from 'react-native';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const { width } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
@@ -55,6 +60,25 @@ const CustomerDashboardScreen = ({ navigation }) => {
     const productId = product._id || product.id;
     if (productId) navigation.navigate('ProductDetails', { id: productId });
   };
+
+  // Banner Setup
+  const [activeBanner, setActiveBanner] = useState(0);
+  const banners = [
+    { id: '1', title: 'Summer Sale', subtitle: 'Up to 30% off on all brake pads', color: '#EF4444' },
+    { id: '2', title: 'Free Inspection', subtitle: 'Book any service today', color: '#111111' },
+    { id: '3', title: 'New Arrivals', subtitle: 'Check out our latest performance parts', color: '#3b82f6' },
+  ];
+
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const nextSlide = (activeBanner + 1) % banners.length;
+      setActiveBanner(nextSlide);
+      scrollViewRef.current?.scrollTo({ x: nextSlide * width, animated: true });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [activeBanner, banners.length]);
 
   return (
     <View style={styles.container}>
@@ -107,37 +131,113 @@ const CustomerDashboardScreen = ({ navigation }) => {
       <View style={styles.mainContent}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
-          {/* Spare Parts Section */}
+          {/* Promotional Banners */}
+          <View style={styles.bannerContainer}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+                setActiveBanner(newIndex);
+              }}
+            >
+              {banners.map((banner, index) => (
+                <View key={banner.id} style={{ width: width, paddingHorizontal: 20 }}>
+                  <View style={[styles.bannerCard, { backgroundColor: banner.color }]}>
+                    <Text style={styles.bannerTitle}>{banner.title}</Text>
+                    <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            <View style={styles.paginationDots}>
+              {banners.map((_, i) => (
+                <View key={i} style={[styles.dot, activeBanner === i && styles.activeDot]} />
+              ))}
+            </View>
+          </View>
+
+          {/* Featured Spare Parts Section (Horizontal) */}
           <View style={styles.recommendedSection}>
-            <Text style={[styles.sectionTitle, { paddingHorizontal: 20 }]}>Available Spare Parts</Text>
-            <View style={styles.recommendedGrid}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Featured Spare Parts</Text>
+              <Text style={styles.viewAllText}>View All</Text>
+            </View>
+            
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollPadding}>
               {filteredProducts.map((product) => {
                 const imageUri = resolveImageUri(product.image);
                 const productId = product._id || product.id;
+                
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={productId}
-                    style={styles.productCard}
                     onPress={() => handleProductPress(product)}
                   >
-                    <View style={styles.productImageContainer}>
-                      {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.productImage} />
-                      ) : (
-                        <View style={styles.imagePlaceholder}><Ionicons name="car" size={40} color="#cbd5e1" /></View>
-                      )}
-                      <TouchableOpacity
-                        style={styles.favoriteBtn}
-                        onPress={() => addToCart(product)}
-                      >
-                        <Ionicons name="heart-outline" size={18} color="#000" />
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.productInfo}>
-                      <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                      <Text style={styles.productPrice}>Rs. {product.finalPrice ?? product.price ?? '0'}</Text>
-                    </View>
-                  </TouchableOpacity>
+                    {({ pressed }) => (
+                      <Animated.View style={[styles.horizontalProductCard, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
+                        <View style={styles.productImageContainer}>
+                          {imageUri ? (
+                            <Image source={{ uri: imageUri }} style={styles.productImage} />
+                          ) : (
+                            <View style={styles.imagePlaceholder}><Ionicons name="car" size={40} color="#cbd5e1" /></View>
+                          )}
+                          <TouchableOpacity
+                            style={styles.favoriteBtn}
+                            onPress={() => addToCart(product)}
+                          >
+                            <Ionicons name="add" size={20} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.productInfo}>
+                          <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                          <Text style={styles.productPrice}>Rs. {product.finalPrice ?? product.price ?? '0'}</Text>
+                        </View>
+                      </Animated.View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+          
+          {/* Recent Arrivals Section (Vertical Grid) */}
+          <View style={styles.recommendedSection}>
+            <Text style={[styles.sectionTitle, { paddingHorizontal: 20 }]}>New Arrivals</Text>
+            <View style={styles.recommendedGrid}>
+              {filteredProducts.slice(0, 4).map((product) => {
+                const imageUri = resolveImageUri(product.image);
+                const productId = product._id || product.id;
+                return (
+                  <Pressable
+                    key={`new-${productId}`}
+                    onPress={() => handleProductPress(product)}
+                    style={{ width: '48%' }}
+                  >
+                    {({ pressed }) => (
+                      <Animated.View style={[styles.productCard, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
+                        <View style={styles.productImageContainer}>
+                          {imageUri ? (
+                            <Image source={{ uri: imageUri }} style={styles.productImage} />
+                          ) : (
+                            <View style={styles.imagePlaceholder}><Ionicons name="car" size={40} color="#cbd5e1" /></View>
+                          )}
+                          <TouchableOpacity
+                            style={styles.favoriteBtn}
+                            onPress={() => addToCart(product)}
+                          >
+                            <Ionicons name="add" size={20} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.productInfo}>
+                          <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
+                          <Text style={styles.productPrice}>Rs. {product.finalPrice ?? product.price ?? '0'}</Text>
+                        </View>
+                      </Animated.View>
+                    )}
+                  </Pressable>
                 );
               })}
             </View>
@@ -251,14 +351,84 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     overflow: 'hidden',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+  bannerContainer: {
+    marginBottom: 24,
+  },
+  bannerCard: {
+    flex: 1,
+    height: 140,
+    borderRadius: 20,
+    padding: 20,
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  bannerSubtitle: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.9,
+  },
+  paginationDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#cbd5e1',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#EF4444',
+    width: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
     marginBottom: 16,
   },
+  viewAllText: {
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
   recommendedSection: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  horizontalScrollPadding: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  horizontalProductCard: {
+    width: width * 0.45,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#94a3b8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   recommendedGrid: {
     flexDirection: 'row',
@@ -267,16 +437,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   productCard: {
-    width: '48%', // 2 columns
+    width: '100%',
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: '#94a3b8',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   productImageContainer: {
     width: '100%',
