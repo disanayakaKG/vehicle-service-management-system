@@ -69,72 +69,118 @@ const CustomerDashboardScreen = ({ navigation }) => {
     { id: '3', title: 'New Arrivals', subtitle: 'Check out our latest performance parts', color: '#3b82f6' },
   ];
 
-  const scrollViewRef = useRef(null);
+  const bannerScrollRef = useRef(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
       const nextSlide = (activeBanner + 1) % banners.length;
       setActiveBanner(nextSlide);
-      scrollViewRef.current?.scrollTo({ x: nextSlide * width, animated: true });
+      bannerScrollRef.current?.scrollTo({ x: nextSlide * width, animated: true });
     }, 4000);
     return () => clearInterval(timer);
   }, [activeBanner, banners.length]);
 
-  return (
-    <View style={styles.container}>
-      {/* Vibrant Red Header */}
-      <View style={styles.redHeader}>
-        <SafeAreaView>
-          <View style={styles.headerTopRow}>
-            <Text style={styles.welcomeText}>Welcome to CarParts.</Text>
-            <TouchableOpacity 
-              style={styles.headerAvatarWrapper} 
-              onPress={() => navigation.navigate('ProfileTab')}
-            >
-              {user?.profileImage ? (
-                <Image source={{ uri: resolveImageUri(user.profileImage) }} style={styles.headerAvatarImage} />
-              ) : (
-                <View style={styles.headerAvatarPlaceholder}>
-                  <Text style={styles.headerAvatarInitial}>
-                    {(user?.name || 'U').charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+  // Animations
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
 
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search parts"
-              placeholderTextColor="#94a3b8"
-              value={searchTerm}
-              onChangeText={setSearchTerm}
-            />
-            <Ionicons name="mic-outline" size={20} color="#64748b" style={styles.micIcon} />
-            <Ionicons name="camera-outline" size={20} color="#64748b" />
-          </View>
+  // We don't need headerTranslateY for absolute positioning anymore, 
+  // as the header will be part of the ScrollView.
+  
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
-          {/* Filter Pills */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsContainer}>
-            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Make <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
-            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Model <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
-            <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Year <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
-            <TouchableOpacity style={styles.filterBtn}><Ionicons name="options-outline" size={16} color="#fff" /></TouchableOpacity>
-          </ScrollView>
-        </SafeAreaView>
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, [products]);
+
+  const renderTopHeaderRow = () => (
+    <View style={styles.redHeaderTopPart}>
+      <SafeAreaView edges={['top', 'left', 'right']}>
+        <Animated.View style={[styles.headerTopRow, { opacity: headerOpacity }]}>
+          <Text style={styles.welcomeText}>Welcome to CarParts.</Text>
+          <TouchableOpacity 
+            style={styles.headerAvatarWrapper} 
+            onPress={() => navigation.navigate('ProfileTab')}
+          >
+            {user?.profileImage ? (
+              <Image source={{ uri: resolveImageUri(user.profileImage) }} style={styles.headerAvatarImage} />
+            ) : (
+              <View style={styles.headerAvatarPlaceholder}>
+                <Text style={styles.headerAvatarInitial}>
+                  {(user?.name || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
+  );
+
+  const renderStickySearchBar = () => (
+    <View style={styles.redHeaderBottomPart}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search parts"
+          placeholderTextColor="#94a3b8"
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+        />
+        <Ionicons name="mic-outline" size={20} color="#64748b" style={styles.micIcon} />
+        <Ionicons name="camera-outline" size={20} color="#64748b" />
       </View>
 
-      {/* Main Content Area overlapping the header */}
-      <View style={styles.mainContent}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      {/* Filter Pills */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillsContainer}>
+        <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Make <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+        <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Model <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+        <TouchableOpacity style={styles.pill}><Text style={styles.pillText}>Year <Ionicons name="chevron-down" size={12} /></Text></TouchableOpacity>
+        <TouchableOpacity style={styles.filterBtn}><Ionicons name="options-outline" size={16} color="#fff" /></TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
 
+  return (
+    <View style={styles.container}>
+      {/* Main Animated ScrollView */}
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContentContainer}
+        scrollEventThrottle={16}
+        stickyHeaderIndices={[1]}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+      >
+        {renderTopHeaderRow()}
+        {renderStickySearchBar()}
+
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], backgroundColor: '#f8fafc', paddingTop: 20 }}>
           {/* Promotional Banners */}
           <View style={styles.bannerContainer}>
             <ScrollView
-              ref={scrollViewRef}
+              ref={bannerScrollRef}
               horizontal
               pagingEnabled
               showsHorizontalScrollIndicator={false}
@@ -242,9 +288,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
               })}
             </View>
           </View>
-
-        </ScrollView>
-      </View>
+        </Animated.View>
+      </Animated.ScrollView>
     </View>
   );
 };
@@ -252,13 +297,24 @@ const CustomerDashboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: '#111111', // Black background to bleed into the safe area behind scrollview
   },
-  redHeader: {
+  redHeaderTopPart: {
     backgroundColor: '#111111',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 10,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'android' ? 20 : 10,
+  },
+  redHeaderBottomPart: {
+    backgroundColor: '#111111',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
   welcomeText: {
     color: '#ffffff',
@@ -305,6 +361,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 50,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
   },
   searchIcon: {
     marginRight: 8,
@@ -319,6 +380,7 @@ const styles = StyleSheet.create({
   },
   pillsContainer: {
     flexDirection: 'row',
+    marginBottom: 10,
   },
   pill: {
     borderWidth: 1,
@@ -342,14 +404,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mainContent: {
-    flex: 1,
+  scrollContentContainer: {
+    paddingBottom: 60,
     backgroundColor: '#f8fafc',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -20,
-    paddingTop: 24,
-    overflow: 'hidden',
+    flexGrow: 1,
   },
   bannerContainer: {
     marginBottom: 24,

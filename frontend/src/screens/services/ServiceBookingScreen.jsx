@@ -103,14 +103,8 @@ const ServiceBookingScreen = ({ navigation }) => {
     // Success Checkmark Animation
     const checkmarkScale = useRef(new Animated.Value(0)).current;
 
-    const headerTranslateY = scrollY.interpolate({
-        inputRange: [0, 120],
-        outputRange: [0, -80], // Stop translating before the search bar hits the status bar
-        extrapolate: 'clamp',
-    });
-    
     const headerOpacity = scrollY.interpolate({
-        inputRange: [0, 80],
+        inputRange: [0, 60],
         outputRange: [1, 0],
         extrapolate: 'clamp',
     });
@@ -336,9 +330,9 @@ const ServiceBookingScreen = ({ navigation }) => {
         (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    const renderHeader = () => (
-        <View style={styles.redHeader}>
-            <SafeAreaView>
+    const renderTopHeaderRow = () => (
+        <View style={styles.redHeaderTopPart}>
+            <SafeAreaView edges={['top', 'left', 'right']}>
                 <Animated.View style={[styles.headerTopRow, { opacity: headerOpacity }]}>
                     <Text style={styles.welcomeText}>Service Booking.</Text>
                     <TouchableOpacity 
@@ -356,21 +350,25 @@ const ServiceBookingScreen = ({ navigation }) => {
                         )}
                     </TouchableOpacity>
                 </Animated.View>
-
-                {/* Floating Search Bar */}
-                <View style={styles.searchContainer}>
-                    <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search services"
-                        placeholderTextColor="#94a3b8"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                    <Ionicons name="mic-outline" size={20} color="#64748b" style={styles.micIcon} />
-                    <Ionicons name="camera-outline" size={20} color="#64748b" />
-                </View>
             </SafeAreaView>
+        </View>
+    );
+
+    const renderStickySearchBar = () => (
+        <View style={styles.redHeaderBottomPart}>
+            {/* Floating Search Bar */}
+            <View style={styles.searchContainer}>
+                <Ionicons name="search" size={20} color="#64748b" style={styles.searchIcon} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search services"
+                    placeholderTextColor="#94a3b8"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                />
+                <Ionicons name="mic-outline" size={20} color="#64748b" style={styles.micIcon} />
+                <Ionicons name="camera-outline" size={20} color="#64748b" />
+            </View>
         </View>
     );
 
@@ -468,27 +466,27 @@ const ServiceBookingScreen = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <Animated.View style={[styles.headerWrapper, { transform: [{ translateY: headerTranslateY }] }]}>
-                {renderHeader()}
-            </Animated.View>
-            
-            {loading ? renderSkeleton() : (
-                <Animated.FlatList
-                    data={filteredServices}
-                    keyExtractor={(item) => item._id}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.listContainer}
-                    scrollEventThrottle={16}
-                    onScroll={Animated.event(
-                        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                        { useNativeDriver: true }
-                    )}
-                    ListHeaderComponent={
+            <Animated.ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContentContainer}
+                scrollEventThrottle={16}
+                stickyHeaderIndices={[1]}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                )}
+            >
+                {renderTopHeaderRow()}
+                {renderStickySearchBar()}
+
+                <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], backgroundColor: '#f8fafc', paddingTop: 20 }}>
+                    {loading ? renderSkeleton() : (
                         <View>
                             {renderBanners()}
-                            <View style={styles.listHeaderTitles}>
-                                <Text style={styles.sectionTitle}>Premium Services</Text>
-                            </View>
+                            <View style={styles.listContainer}>
+                                <View style={styles.listHeaderTitles}>
+                                    <Text style={styles.sectionTitle}>Premium Services</Text>
+                                </View>
                             
                             {isAdmin && (
                                 <View style={styles.adminSection}>
@@ -519,43 +517,49 @@ const ServiceBookingScreen = ({ navigation }) => {
                                     )}
                                 </View>
                             )}
-                        </View>
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="construct-outline" size={60} color="#cbd5e1" />
-                            <Text style={styles.emptyTitle}>No Services Available</Text>
-                            <Text style={styles.emptySubtitle}>We are updating our service catalog. Please check back later.</Text>
-                        </View>
-                    }
-                    renderItem={renderServiceItem}
-                    ListFooterComponent={
-                        !isAdmin ? (
-                            <Pressable 
-                                onPress={() => setShowBookingsModal(true)}
-                                style={{ marginVertical: 20 }}
-                            >
-                                {({ pressed }) => (
-                                    <Animated.View style={[styles.myBookingsBanner, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-                                        <View style={styles.myBookingsLeft}>
-                                            <View style={styles.myBookingsIconSquare}>
-                                                <Ionicons name="calendar" size={24} color="#fff" />
+                            
+                            {filteredServices.length === 0 ? (
+                                <View style={styles.emptyContainer}>
+                                    <Ionicons name="construct-outline" size={60} color="#cbd5e1" />
+                                    <Text style={styles.emptyTitle}>No Services Available</Text>
+                                    <Text style={styles.emptySubtitle}>We are updating our service catalog. Please check back later.</Text>
+                                </View>
+                            ) : (
+                                filteredServices.map((service, index) => (
+                                    <View key={service._id}>
+                                        {renderServiceItem({ item: service, index })}
+                                    </View>
+                                ))
+                            )}
+
+                            {!isAdmin && (
+                                <Pressable 
+                                    onPress={() => setShowBookingsModal(true)}
+                                    style={{ marginVertical: 20 }}
+                                >
+                                    {({ pressed }) => (
+                                        <Animated.View style={[styles.myBookingsBanner, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+                                            <View style={styles.myBookingsLeft}>
+                                                <View style={styles.myBookingsIconSquare}>
+                                                    <Ionicons name="calendar" size={24} color="#fff" />
+                                                </View>
+                                                <View>
+                                                    <Text style={styles.myBookingsTitleBanner}>My Bookings</Text>
+                                                    <Text style={styles.myBookingsSubBanner}>View your history & status</Text>
+                                                </View>
                                             </View>
-                                            <View>
-                                                <Text style={styles.myBookingsTitleBanner}>My Bookings</Text>
-                                                <Text style={styles.myBookingsSubBanner}>View your history & status</Text>
+                                            <View style={styles.badgeCountBanner}>
+                                                <Text style={styles.badgeTextBanner}>{bookings.length}</Text>
                                             </View>
-                                        </View>
-                                        <View style={styles.badgeCountBanner}>
-                                            <Text style={styles.badgeTextBanner}>{bookings.length}</Text>
-                                        </View>
-                                    </Animated.View>
-                                )}
-                            </Pressable>
-                        ) : null
-                    }
-                />
-            )}
+                                        </Animated.View>
+                                    )}
+                                </Pressable>
+                            )}
+                        </View>
+                        </View>
+                    )}
+                </Animated.View>
+            </Animated.ScrollView>
 
             {/* Bottom Sheet Booking Modal */}
             {isBookingSheetVisible && (
@@ -745,20 +749,17 @@ const ServiceBookingScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#111111',
     },
-    headerWrapper: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 10,
-    },
-    redHeader: {
+    redHeaderTopPart: {
         backgroundColor: '#111111',
         paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'android' ? 40 : 20,
-        paddingBottom: 30,
+        paddingTop: Platform.OS === 'android' ? 20 : 10,
+    },
+    redHeaderBottomPart: {
+        backgroundColor: '#111111',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
         shadowColor: '#000',
@@ -860,8 +861,12 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 
+    scrollContentContainer: {
+        paddingBottom: 60,
+        backgroundColor: '#f8fafc',
+        flexGrow: 1,
+    },
     listContainer: {
-        paddingTop: Platform.OS === 'android' ? 280 : 240, // Guarantee absolute header doesn't overlap on safe area notches
         paddingHorizontal: 20,
         paddingBottom: 40,
     },
