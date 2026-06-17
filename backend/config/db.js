@@ -1,6 +1,3 @@
-// MUST BE AT THE VERY TOP - BEFORE ANYTHING ELSE
-const dns = require('node:dns/promises');
-dns.setServers(['1.1.1.1', '8.8.8.8']);
 
 const mongoose = require('mongoose');
 
