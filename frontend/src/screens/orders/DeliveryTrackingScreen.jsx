@@ -5,11 +5,14 @@ import {
     StyleSheet, 
     ScrollView, 
     ActivityIndicator, 
-    TouchableOpacity 
+    TouchableOpacity,
+    Modal,
+    TextInput,
+    Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
-import { getOrderById } from '../../api/orderApi';
+import { getOrderById, cancelOrder, updateOrderDetails } from '../../api/orderApi';
 
 const DeliveryTrackingScreen = ({ route, navigation }) => {
     const { token } = useContext(AuthContext);
@@ -17,6 +20,13 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Edit Modal State
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [editAddress, setEditAddress] = useState('');
+    const [editPhone, setEditPhone] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     useEffect(() => {
         loadOrderDetails();
@@ -35,12 +45,58 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
             }
             
             setOrder(orderData);
+            setEditAddress(orderData.shippingAddress || '');
+            setEditPhone(orderData.customerPhone || '');
         } catch (err) {
             console.error('Error loading order details:', err);
             setError(err?.response?.data?.message || err.message || 'Failed to load order details');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleUpdateDetails = async () => {
+        if (!editAddress.trim() || !editPhone.trim()) {
+            Alert.alert('Error', 'Address and Phone number cannot be empty.');
+            return;
+        }
+        try {
+            setIsUpdating(true);
+            await updateOrderDetails(orderId, { shippingAddress: editAddress, customerPhone: editPhone }, token);
+            Alert.alert('Success', 'Delivery details updated successfully.');
+            setIsEditModalVisible(false);
+            loadOrderDetails();
+        } catch (err) {
+            Alert.alert('Error', err?.message || 'Failed to update delivery details.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleCancelOrder = () => {
+        Alert.alert(
+            'Cancel Order',
+            'Are you sure you want to cancel this order? This action cannot be undone.',
+            [
+                { text: 'No', style: 'cancel' },
+                { 
+                    text: 'Yes, Cancel', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            setIsCancelling(true);
+                            await cancelOrder(orderId, token);
+                            Alert.alert('Success', 'Order cancelled successfully.');
+                            loadOrderDetails();
+                        } catch (err) {
+                            Alert.alert('Error', err?.message || 'Failed to cancel order.');
+                        } finally {
+                            setIsCancelling(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const getStatusIndex = (status) => {
@@ -161,6 +217,8 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
         { key: 'Delivered', label: 'Delivered', description: 'Your order has been delivered' }
     ];
 
+    const canModifyOrder = order.orderStatus === 'Pending' || order.orderStatus === 'Confirmed';
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -227,6 +285,11 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
                         <Text style={styles.detailLabel}>Delivery Address:</Text>
                         <Text style={styles.detailValue}>{order.shippingAddress}</Text>
                     </View>
+
+                    <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Contact Number:</Text>
+                        <Text style={styles.detailValue}>{order.customerPhone}</Text>
+                    </View>
                     
                     <View style={styles.detailRow}>
                         <Text style={styles.detailLabel}>Payment Method:</Text>
@@ -271,6 +334,34 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
                             {order.orderStatus}
                         </Text>
                     </View>
+
+                    {canModifyOrder && (
+                        <View style={styles.actionButtonsContainer}>
+                            <TouchableOpacity 
+                                style={styles.editButton} 
+                                onPress={() => setIsEditModalVisible(true)}
+                                disabled={isCancelling}
+                            >
+                                <Ionicons name="pencil" size={18} color="#2563eb" />
+                                <Text style={styles.editButtonText}>Edit Details</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity 
+                                style={styles.cancelButton} 
+                                onPress={handleCancelOrder}
+                                disabled={isCancelling}
+                            >
+                                {isCancelling ? (
+                                    <ActivityIndicator size="small" color="#ef4444" />
+                                ) : (
+                                    <>
+                                        <Ionicons name="close-circle-outline" size={18} color="#ef4444" />
+                                        <Text style={styles.cancelButtonText}>Cancel Order</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 {/* Order Items */}
@@ -289,6 +380,67 @@ const DeliveryTrackingScreen = ({ route, navigation }) => {
                     ))}
                 </View>
             </ScrollView>
+
+            {/* Edit Details Modal */}
+            <Modal
+                visible={isEditModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => !isUpdating && setIsEditModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Edit Delivery Info</Text>
+                            <TouchableOpacity onPress={() => setIsEditModalVisible(false)} disabled={isUpdating}>
+                                <Ionicons name="close" size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.inputLabel}>Delivery Address</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={editAddress}
+                            onChangeText={setEditAddress}
+                            placeholder="Enter delivery address"
+                            multiline
+                            numberOfLines={3}
+                            editable={!isUpdating}
+                        />
+
+                        <Text style={styles.inputLabel}>Contact Number</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={editPhone}
+                            onChangeText={setEditPhone}
+                            placeholder="Enter contact number"
+                            keyboardType="phone-pad"
+                            editable={!isUpdating}
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity 
+                                style={styles.modalCancelBtn} 
+                                onPress={() => setIsEditModalVisible(false)}
+                                disabled={isUpdating}
+                            >
+                                <Text style={styles.modalCancelBtnText}>Discard</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.modalSaveBtn} 
+                                onPress={handleUpdateDetails}
+                                disabled={isUpdating}
+                            >
+                                {isUpdating ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.modalSaveBtnText}>Save Changes</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -335,7 +487,27 @@ const styles = StyleSheet.create({
     itemInfo: { flex: 1 },
     itemName: { fontSize: 15, fontWeight: '600', color: '#0f172a', marginBottom: 2 },
     itemDetails: { fontSize: 13, color: '#6b7280' },
-    itemSubtotal: { fontSize: 15, fontWeight: '600', color: '#0f172a' }
+    itemSubtotal: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
+
+    // Action Buttons
+    actionButtonsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f1f5f9', gap: 12 },
+    editButton: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' },
+    editButtonText: { color: '#2563eb', fontWeight: '600', fontSize: 14, marginLeft: 6 },
+    cancelButton: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca' },
+    cancelButtonText: { color: '#ef4444', fontWeight: '600', fontSize: 14, marginLeft: 6 },
+
+    // Modal Styles
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#ffffff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    modalTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a' },
+    inputLabel: { fontSize: 14, fontWeight: '600', color: '#475569', marginBottom: 8 },
+    modalInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 15, color: '#0f172a', marginBottom: 16, textAlignVertical: 'top' },
+    modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+    modalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#f1f5f9', alignItems: 'center' },
+    modalCancelBtnText: { color: '#475569', fontWeight: '600', fontSize: 15 },
+    modalSaveBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: '#2563eb', alignItems: 'center' },
+    modalSaveBtnText: { color: '#ffffff', fontWeight: '600', fontSize: 15 }
 });
 
 export default DeliveryTrackingScreen;

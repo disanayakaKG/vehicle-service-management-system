@@ -40,6 +40,15 @@ export const updateOrderStatus = async (id, status, token) => {
     }
 };
 
+export const updateOrderDetails = async (id, details, token) => {
+    try {
+        const response = await API.put(`/orders/${id}/details`, details, withAuthHeader(token));
+        return response.data;
+    } catch (error) {
+        throw error.response?.data?.message || error.message;
+    }
+};
+
 export const cancelOrder = async (id, token) => {
     try {
         const response = await API.put(`/orders/${id}/cancel`, {}, withAuthHeader(token));

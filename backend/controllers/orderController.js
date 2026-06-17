@@ -179,11 +179,24 @@ const updateDeliveryStatus = async (req, res) => {
     }
 };
 
+// @desc    Cancel an order
+// @route   PUT /api/orders/:id/cancel
+// @access  Private
 const cancelOrder = async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Verify ownership (or allow admins)
+        if (order.customer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to cancel this order' });
+        }
+
+        // Only allow cancellation if Pending or Confirmed
+        if (order.orderStatus !== 'Pending' && order.orderStatus !== 'Confirmed') {
+            return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
         }
 
         order.orderStatus = 'Cancelled';
@@ -192,6 +205,38 @@ const cancelOrder = async (req, res) => {
         res.status(200).json(cancelledOrder);
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update order details (address, phone) before processing
+// @route   PUT /api/orders/:id/details
+// @access  Private
+const updateOrderDetails = async (req, res) => {
+    try {
+        const { shippingAddress, customerPhone } = req.body;
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Verify ownership
+        if (order.customer.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to update this order' });
+        }
+
+        // Only allow updates if Pending or Confirmed
+        if (order.orderStatus !== 'Pending' && order.orderStatus !== 'Confirmed') {
+            return res.status(400).json({ message: 'Cannot update details for an order that is already being processed' });
+        }
+
+        if (shippingAddress) order.shippingAddress = shippingAddress;
+        if (customerPhone) order.customerPhone = customerPhone;
+
+        const updatedOrder = await order.save();
+        res.status(200).json(updatedOrder);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
     }
 };
 
@@ -237,6 +282,7 @@ module.exports = {
     getOrderById,
     updateOrderStatus,
     updateDeliveryStatus,
+    updateOrderDetails,
     cancelOrder,
     refundOrder
 };

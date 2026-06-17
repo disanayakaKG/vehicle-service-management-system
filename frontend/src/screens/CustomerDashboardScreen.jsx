@@ -51,9 +51,10 @@ const CustomerDashboardScreen = ({ navigation }) => {
           console.log('Customer dashboard product fetch error:', error);
         }
       };
+
       loadProducts();
       return () => { active = false; };
-    }, [])
+    }, [user?.token])
   );
 
   const handleProductPress = (product) => {
@@ -87,7 +88,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
 
   // We don't need headerTranslateY for absolute positioning anymore, 
   // as the header will be part of the ScrollView.
-  
+
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 60],
     outputRange: [1, 0],
@@ -115,8 +116,8 @@ const CustomerDashboardScreen = ({ navigation }) => {
       <SafeAreaView edges={['top', 'left', 'right']}>
         <Animated.View style={[styles.headerTopRow, { opacity: headerOpacity }]}>
           <Text style={styles.welcomeText}>Welcome to CarParts.</Text>
-          <TouchableOpacity 
-            style={styles.headerAvatarWrapper} 
+          <TouchableOpacity
+            style={styles.headerAvatarWrapper}
             onPress={() => navigation.navigate('ProfileTab')}
           >
             {user?.profileImage ? (
@@ -211,12 +212,12 @@ const CustomerDashboardScreen = ({ navigation }) => {
               <Text style={styles.sectionTitle}>Featured Spare Parts</Text>
               <Text style={styles.viewAllText}>View All</Text>
             </View>
-            
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollPadding}>
               {filteredProducts.map((product) => {
                 const imageUri = resolveImageUri(product.image);
                 const productId = product._id || product.id;
-                
+
                 return (
                   <Pressable
                     key={productId}
@@ -248,7 +249,7 @@ const CustomerDashboardScreen = ({ navigation }) => {
               })}
             </ScrollView>
           </View>
-          
+
           {/* Recent Arrivals Section (Vertical Grid) */}
           <View style={styles.recommendedSection}>
             <Text style={[styles.sectionTitle, { paddingHorizontal: 20 }]}>New Arrivals</Text>
@@ -288,6 +289,18 @@ const CustomerDashboardScreen = ({ navigation }) => {
               })}
             </View>
           </View>
+
+          <View style={styles.orderHistoryButtonContainer}>
+            <TouchableOpacity 
+              style={styles.viewOrderHistoryBtn}
+              onPress={() => navigation.navigate('OrderHistory')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="receipt-outline" size={20} color="#ffffff" />
+              <Text style={styles.viewOrderHistoryText}>View Order History</Text>
+            </TouchableOpacity>
+          </View>
+
         </Animated.View>
       </Animated.ScrollView>
     </View>
@@ -551,6 +564,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#0f172a',
+  },
+  orderHistoryButtonContainer: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 40,
+  },
+  viewOrderHistoryBtn: {
+    backgroundColor: '#0f172a',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  viewOrderHistoryText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
   },
 });
 

@@ -9,6 +9,7 @@ const {
     updateOrderStatus,
     updateDeliveryStatus,
     cancelOrder,
+    updateOrderDetails,
     refundOrder
 } = require('../controllers/orderController');
 
@@ -18,6 +19,7 @@ router.get('/my', protect, getMyOrders);
 router.get('/:id', protect, getOrderById);
 router.put('/:id/status', protect, adminOnly, updateOrderStatus);
 router.put('/:id/delivery', protect, adminOnly, updateDeliveryStatus);
+router.put('/:id/details', protect, updateOrderDetails);
 router.put('/:id/cancel', protect, cancelOrder);
 router.put('/:id/refund', protect, refundOrder);
 

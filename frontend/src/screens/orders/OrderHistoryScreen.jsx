@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useContext, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Alert, Modal, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyOrders } from '../../api/orderApi';
+import { getMyOrders, cancelOrder, updateOrderDetails } from '../../api/orderApi';
 import { AuthContext } from '../../context/AuthContext';
 
 const OrderHistoryScreen = ({ navigation }) => {
@@ -10,21 +11,83 @@ const OrderHistoryScreen = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    
-    useEffect(() => {
-        const loadOrders = async () => {
-            try {
-                const data = await getMyOrders(token);
-                setOrders(data);
-            } catch (err) {
-                setError(err?.message || 'Unable to fetch orders');
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Edit Modal State
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [editAddress, setEditAddress] = useState('');
+    const [editPhone, setEditPhone] = useState('');
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
 
-        loadOrders();
-    }, [token]);
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
+            const loadOrders = async () => {
+                try {
+                    setLoading(true);
+                    const data = await getMyOrders(token);
+                    if (active) {
+                        setOrders(data);
+                        setError(null);
+                    }
+                } catch (err) {
+                    if (active) setError(err?.message || 'Unable to fetch orders');
+                } finally {
+                    if (active) setLoading(false);
+                }
+            };
+
+            loadOrders();
+
+            return () => { active = false; };
+        }, [token])
+    );
+
+    const handleUpdateDetails = async () => {
+        if (!editAddress.trim() || !editPhone.trim()) {
+            Alert.alert('Error', 'Address and Phone number cannot be empty.');
+            return;
+        }
+        try {
+            setIsUpdating(true);
+            await updateOrderDetails(selectedOrderId, { shippingAddress: editAddress, customerPhone: editPhone }, token);
+            Alert.alert('Success', 'Delivery details updated successfully.');
+            setIsEditModalVisible(false);
+            const data = await getMyOrders(token);
+            setOrders(data);
+        } catch (err) {
+            Alert.alert('Error', err?.message || 'Failed to update delivery details.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleCancelOrder = (orderId) => {
+        Alert.alert(
+            'Cancel Order',
+            'Are you sure you want to cancel this order? This action cannot be undone.',
+            [
+                { text: 'No', style: 'cancel' },
+                { 
+                    text: 'Yes, Cancel', 
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            setIsCancelling(true);
+                            await cancelOrder(orderId, token);
+                            Alert.alert('Success', 'Order cancelled successfully.');
+                            const data = await getMyOrders(token);
+                            setOrders(data);
+                        } catch (err) {
+                            Alert.alert('Error', err?.message || 'Failed to cancel order.');
+                        } finally {
+                            setIsCancelling(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const getBadge = (status) => {
         const normalized = String(status || '').toLowerCase();
@@ -93,6 +156,34 @@ const OrderHistoryScreen = ({ navigation }) => {
                         {item.trackingNumber ? `Tracking: ${item.trackingNumber}` : 'Tap to track'}
                     </Text>
                 </View>
+
+                {(item.orderStatus === 'Pending' || item.orderStatus === 'Confirmed') && (
+                    <View style={styles.orderActionButtons}>
+                        <TouchableOpacity 
+                            style={styles.orderEditBtn}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                setSelectedOrderId(item._id);
+                                setEditAddress(item.shippingAddress || '');
+                                setEditPhone(item.customerPhone || '');
+                                setIsEditModalVisible(true);
+                            }}
+                        >
+                            <Ionicons name="pencil" size={16} color="#2563eb" />
+                            <Text style={styles.orderEditBtnText}>Edit Info</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.orderCancelBtn}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                handleCancelOrder(item._id);
+                            }}
+                        >
+                            <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
+                            <Text style={styles.orderCancelBtnText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </TouchableOpacity>
         );
     };
@@ -134,6 +225,67 @@ const OrderHistoryScreen = ({ navigation }) => {
                     </View>
                 }
             />
+
+            {/* Edit Details Modal */}
+            <Modal
+                visible={isEditModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => !isUpdating && setIsEditModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Edit Delivery Info</Text>
+                            <TouchableOpacity onPress={() => setIsEditModalVisible(false)} disabled={isUpdating}>
+                                <Ionicons name="close" size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.inputLabel}>Delivery Address</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={editAddress}
+                            onChangeText={setEditAddress}
+                            placeholder="Enter delivery address"
+                            multiline
+                            numberOfLines={3}
+                            editable={!isUpdating}
+                        />
+
+                        <Text style={styles.inputLabel}>Contact Number</Text>
+                        <TextInput
+                            style={styles.modalInput}
+                            value={editPhone}
+                            onChangeText={setEditPhone}
+                            placeholder="Enter contact number"
+                            keyboardType="phone-pad"
+                            editable={!isUpdating}
+                        />
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity 
+                                style={styles.modalCancelBtn} 
+                                onPress={() => setIsEditModalVisible(false)}
+                                disabled={isUpdating}
+                            >
+                                <Text style={styles.modalCancelBtnText}>Discard</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.modalSaveBtn} 
+                                onPress={handleUpdateDetails}
+                                disabled={isUpdating}
+                            >
+                                {isUpdating ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={styles.modalSaveBtnText}>Save Changes</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -303,6 +455,117 @@ const styles = StyleSheet.create({
         fontSize: 16,
         textAlign: 'center',
         marginHorizontal: 16,
+    },
+    orderActionButtons: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#f3f4f6',
+        paddingTop: 12,
+    },
+    orderEditBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 10,
+        backgroundColor: '#eff6ff',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#bfdbfe',
+    },
+    orderEditBtnText: {
+        color: '#2563eb',
+        fontSize: 13,
+        fontWeight: '600',
+        marginLeft: 6,
+    },
+    orderCancelBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 10,
+        backgroundColor: '#fef2f2',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#fecaca',
+    },
+    orderCancelBtnText: {
+        color: '#ef4444',
+        fontSize: 13,
+        fontWeight: '600',
+        marginLeft: 6,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#ffffff',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#0f172a',
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 8,
+    },
+    modalInput: {
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 12,
+        padding: 14,
+        fontSize: 15,
+        color: '#0f172a',
+        marginBottom: 16,
+        textAlignVertical: 'top',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 8,
+    },
+    modalCancelBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: '#f1f5f9',
+        alignItems: 'center',
+    },
+    modalCancelBtnText: {
+        color: '#475569',
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    modalSaveBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        backgroundColor: '#2563eb',
+        alignItems: 'center',
+    },
+    modalSaveBtnText: {
+        color: '#ffffff',
+        fontWeight: '600',
+        fontSize: 15,
     },
 });
 
