@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Central BASE_URL for the backend API
-const FALLBACK_API_BASE_URL = "https://vehicle-service-management-system-production-8500.up.railway.app"; // Railway Production URL
+const FALLBACK_API_BASE_URL = "http://192.168.8.146:5000"; // Changed to local backend IP
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || FALLBACK_API_BASE_URL;
 const BASE_URL = `${API_BASE_URL}/api`;
 
@@ -27,7 +27,7 @@ export const getUserProfile = async (token) => {
 
 export const updateUserProfile = async (data, token) => {
     return await API.put('/auth/profile', data, {
-        headers: { 
+        headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'multipart/form-data',
         },
