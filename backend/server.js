@@ -1,6 +1,14 @@
 
 require('dotenv').config();
 
+// Apply DNS fix ONLY for local development (resolves ISP blocks on MongoDB SRV)
+// We skip this in production/Railway because it breaks their internal routing
+if (process.env.NODE_ENV !== 'production' && !process.env.RAILWAY_ENVIRONMENT_NAME) {
+    console.log("🔧 Applying local DNS fix for MongoDB...");
+    const dns = require('node:dns');
+    dns.setServers(['1.1.1.1', '8.8.8.8']);
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
